@@ -1,0 +1,75 @@
+<div class="min-h-screen bg-black text-white p-6 md:p-10">
+  <div class="max-w-xl mx-auto">
+    <h1 class="text-2xl font-semibold text-white mb-6">Tasks</h1>
+
+    <!-- Add task -->
+    <form (ngSubmit)="addTask()" class="flex gap-2 mb-6">
+      <input
+        type="text"
+        [(ngModel)]="newTaskText"
+        name="newTask"
+        placeholder="New task..."
+        class="flex-1 rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
+      />
+      <button
+        type="submit"
+        class="rounded-xl bg-white text-black px-5 py-3 font-medium hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-400 shrink-0"
+      >
+        Add
+      </button>
+    </form>
+
+    <!-- List -->
+    <ul class="space-y-2">
+      @for (task of tasks; track task.id) {
+        <li
+          class="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 flex items-center gap-3 group"
+        >
+          @if (editingId === task.id) {
+            <input
+              type="text"
+              [(ngModel)]="editText"
+              (keydown.enter)="saveEdit()"
+              (keydown.escape)="cancelEdit()"
+              class="flex-1 rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-white"
+            />
+            <button
+              type="button"
+              (click)="saveEdit()"
+              class="rounded-lg bg-white text-black px-3 py-2 text-sm font-medium hover:bg-neutral-200"
+            >
+              Save
+            </button>
+            <button
+              type="button"
+              (click)="cancelEdit()"
+              class="rounded-lg bg-neutral-700 text-white px-3 py-2 text-sm hover:bg-neutral-600"
+            >
+              Cancel
+            </button>
+          } @else {
+            <span class="flex-1 text-neutral-100">{{ task.text }}</span>
+            <button
+              type="button"
+              (click)="startEdit(task)"
+              class="rounded-lg bg-neutral-700 text-white px-3 py-2 text-sm font-medium hover:bg-white hover:text-black"
+            >
+              Edit
+            </button>
+            <button
+              type="button"
+              (click)="removeTask(task.id)"
+              class="rounded-lg bg-neutral-800 text-neutral-400 px-3 py-2 text-sm hover:bg-red-900/30 hover:text-white"
+            >
+              Remove
+            </button>
+          }
+        </li>
+      } @empty {
+        <p class="text-neutral-500 rounded-xl bg-neutral-900/50 border border-neutral-800 px-4 py-6 text-center">
+          No tasks yet. Add one above.
+        </p>
+      }
+    </ul>
+  </div>
+</div>
