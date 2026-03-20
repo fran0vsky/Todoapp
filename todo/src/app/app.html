@@ -1,75 +1,353 @@
 <div class="min-h-screen bg-black text-white p-6 md:p-10">
-  <div class="max-w-xl mx-auto">
-    <h1 class="text-2xl font-semibold text-white mb-6">Tasks</h1>
+  <div class="max-w-5xl w-full mx-auto">
+    <div class="flex items-start justify-between gap-4 mb-6">
+      <h1 class="text-3xl font-semibold text-white leading-tight">Simple Worflow Menager</h1>
 
-    <!-- Add task -->
-    <form (ngSubmit)="addTask()" class="flex gap-2 mb-6">
-      <input
-        type="text"
-        [(ngModel)]="newTaskText"
-        name="newTask"
-        placeholder="New task..."
-        class="flex-1 rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-white focus:border-transparent"
-      />
+      <!-- Top Add button (opens modal form) -->
       <button
-        type="submit"
-        class="rounded-xl bg-white text-black px-5 py-3 font-medium hover:bg-neutral-200 focus:outline-none focus:ring-2 focus:ring-neutral-400 shrink-0"
+        type="button"
+        (click)="openAddForm()"
+        class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow shrink-0"
       >
         Add
       </button>
-    </form>
+    </div>
 
-    <!-- List -->
-    <ul class="space-y-2">
-      @for (task of tasks; track task.id) {
-        <li
-          class="rounded-xl bg-neutral-900 border border-neutral-800 px-4 py-3 flex items-center gap-3 group"
-        >
-          @if (editingId === task.id) {
-            <input
-              type="text"
-              [(ngModel)]="editText"
-              (keydown.enter)="saveEdit()"
-              (keydown.escape)="cancelEdit()"
-              class="flex-1 rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-white"
-            />
+    @if (showAddForm) {
+      <div class="fixed inset-0 bg-black/60 flex items-center justify-center p-6">
+        <div class="w-full max-w-lg rounded-xl bg-neutral-900 border border-neutral-800 p-6 shadow-lg shadow-black/40">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-neutral-200 font-medium">Add task</h2>
             <button
               type="button"
-              (click)="saveEdit()"
-              class="rounded-lg bg-white text-black px-3 py-2 text-sm font-medium hover:bg-neutral-200"
-            >
-              Save
-            </button>
-            <button
-              type="button"
-              (click)="cancelEdit()"
-              class="rounded-lg bg-neutral-700 text-white px-3 py-2 text-sm hover:bg-neutral-600"
+              (click)="closeAddForm()"
+              class="rounded-lg bg-neutral-800 text-neutral-200 px-3 py-2 text-sm hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-300/50"
             >
               Cancel
             </button>
-          } @else {
-            <span class="flex-1 text-neutral-100">{{ task.text }}</span>
+          </div>
+
+          <form (ngSubmit)="addTask()" class="flex flex-col gap-2">
+            <div class="flex gap-2">
+              <div class="flex-1 flex flex-col gap-1 min-w-0">
+                <label class="text-neutral-300 text-sm">Title</label>
+                <input
+                  type="text"
+                  [(ngModel)]="newTaskText"
+                  name="newTask"
+                  placeholder="Title..."
+                  class="w-full rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+                />
+              </div>
+
+              <div class="w-44 flex flex-col gap-1">
+                <label class="text-neutral-300 text-sm">Status</label>
+                <select
+                  [(ngModel)]="newTaskStatus"
+                  name="newTaskStatus"
+                  aria-label="Task status"
+                  class="w-full rounded-xl bg-neutral-800 text-white px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus-visible:outline-none"
+                >
+                  <option value="todo">To be done</option>
+                  <option value="doing">Working on it</option>
+                  <option value="done">Done</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="flex flex-col gap-1">
+              <label class="text-neutral-300 text-sm">Description</label>
+              <input
+                type="text"
+                [(ngModel)]="newTaskDescription"
+                name="newTaskDescription"
+                placeholder="Description (optional)..."
+                class="w-full rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+              />
+            </div>
+
+            <div class="flex gap-2 pt-2">
+              <button
+                type="button"
+                (click)="closeAddForm()"
+                class="flex-1 rounded-xl bg-neutral-800 text-neutral-200 px-4 py-3 text-sm font-medium hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-600"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                [disabled]="!newTaskText.trim()"
+                class="flex-1 rounded-xl bg-purple-500 text-white px-4 py-3 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:opacity-60 disabled:hover:bg-purple-500"
+              >
+                Save
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    }
+
+    <!-- List -->
+    @if (isLoading) {
+      <div
+        class="rounded-xl bg-neutral-900/50 border border-neutral-800 px-4 py-8 flex items-center justify-center gap-3 text-neutral-300"
+      >
+        <span
+          class="inline-block w-5 h-5 border-2 border-neutral-500 border-t-purple-200 rounded-full animate-spin"
+        ></span>
+        <span>Loading tasks...</span>
+      </div>
+    } @else {
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <!-- To be done -->
+        <section class="rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5">
+          <div class="flex items-center justify-between mb-4 gap-3">
+            <h2 class="text-purple-100 font-semibold">To be done</h2>
             <button
               type="button"
-              (click)="startEdit(task)"
-              class="rounded-lg bg-neutral-700 text-white px-3 py-2 text-sm font-medium hover:bg-white hover:text-black"
+              (click)="openAddFormWithStatus('todo')"
+              class="rounded-lg bg-purple-500/10 text-purple-200 px-3 py-1.5 text-xs font-medium hover:bg-purple-500/20 focus:outline-none focus:ring-2 focus:ring-purple-300/30"
             >
-              Edit
+              + Add
             </button>
+          </div>
+          <ul class="space-y-2">
+            @for (task of tasksToBeDone; track task.id) {
+              <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 group min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
+                @if (editingId === task.id) {
+                  <div class="min-w-0 flex flex-col gap-2">
+                    <input
+                      type="text"
+                      [(ngModel)]="editTitleText"
+                      (keydown.enter)="saveEdit()"
+                      (keydown.escape)="cancelEdit()"
+                      class="w-full rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+                    />
+                    <input
+                      type="text"
+                      [(ngModel)]="editDescriptionText"
+                      (keydown.enter)="saveEdit()"
+                      (keydown.escape)="cancelEdit()"
+                      class="w-full rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+                    />
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      (click)="saveEdit()"
+                      class="flex-1 rounded-lg bg-purple-500 text-white px-4 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300/60"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      (click)="cancelEdit()"
+                      class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-200 px-4 py-2.5 text-sm hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500/40"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                } @else {
+                  <div class="min-w-0">
+                    <div class="text-purple-100 font-medium break-words min-h-6">
+                      {{ task.title }}
+                    </div>
+                    <div class="text-purple-200/70 text-sm break-words min-h-4 mt-1">
+                      {{ task.description || ' ' }}
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      (click)="startEdit(task)"
+                      class="flex-1 rounded-lg bg-neutral-800/70 text-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      (click)="removeTask(task.id)"
+                      class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                }
+              </li>
+            } @empty {
+              <li class="rounded-xl bg-neutral-900/20 border border-neutral-800 px-4 py-4 text-purple-200/70 text-sm text-center">
+                No tasks here yet. Add one!
+              </li>
+            }
+          </ul>
+        </section>
+
+        <!-- Working on it -->
+        <section class="rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5">
+          <div class="flex items-center justify-between mb-4 gap-3">
+            <h2 class="text-purple-200 font-semibold">Working on it</h2>
             <button
               type="button"
-              (click)="removeTask(task.id)"
-              class="rounded-lg bg-neutral-800 text-neutral-400 px-3 py-2 text-sm hover:bg-red-900/30 hover:text-white"
+              (click)="openAddFormWithStatus('doing')"
+              class="rounded-lg bg-purple-500/15 text-purple-200 px-3 py-1.5 text-xs font-medium hover:bg-purple-500/25 focus:outline-none focus:ring-2 focus:ring-purple-300/30"
             >
-              Remove
+              + Add
             </button>
-          }
-        </li>
-      } @empty {
-        <p class="text-neutral-500 rounded-xl bg-neutral-900/50 border border-neutral-800 px-4 py-6 text-center">
-          No tasks yet. Add one above.
-        </p>
-      }
-    </ul>
+          </div>
+          <ul class="space-y-2">
+            @for (task of tasksWorkingOnIt; track task.id) {
+              <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 group min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
+                @if (editingId === task.id) {
+                  <div class="min-w-0 flex flex-col gap-2">
+                    <input
+                      type="text"
+                      [(ngModel)]="editTitleText"
+                      (keydown.enter)="saveEdit()"
+                      (keydown.escape)="cancelEdit()"
+                      class="w-full rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+                    />
+                    <input
+                      type="text"
+                      [(ngModel)]="editDescriptionText"
+                      (keydown.enter)="saveEdit()"
+                      (keydown.escape)="cancelEdit()"
+                      class="w-full rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+                    />
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      (click)="saveEdit()"
+                      class="flex-1 rounded-lg bg-purple-500 text-white px-4 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300/60"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      (click)="cancelEdit()"
+                      class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-200 px-4 py-2.5 text-sm hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500/40"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                } @else {
+                  <div class="min-w-0">
+                    <div class="text-purple-100 font-medium break-words min-h-6">
+                      {{ task.title }}
+                    </div>
+                    <div class="text-purple-200/70 text-sm break-words min-h-4 mt-1">
+                      {{ task.description || ' ' }}
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      (click)="startEdit(task)"
+                      class="flex-1 rounded-lg bg-neutral-800/70 text-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      (click)="removeTask(task.id)"
+                      class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                }
+              </li>
+            } @empty {
+              <li class="rounded-xl bg-neutral-900/20 border border-neutral-800 px-4 py-4 text-purple-200/70 text-sm text-center">
+                Nothing in progress right now.
+              </li>
+            }
+          </ul>
+        </section>
+
+        <!-- Done -->
+        <section class="rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5">
+          <div class="flex items-center justify-between mb-4 gap-3">
+            <h2 class="text-purple-200 font-semibold">Done</h2>
+            <button
+              type="button"
+              (click)="openAddFormWithStatus('done')"
+              class="rounded-lg bg-purple-500/10 text-purple-200 px-3 py-1.5 text-xs font-medium hover:bg-purple-500/20 focus:outline-none focus:ring-2 focus:ring-purple-300/20"
+            >
+              + Add
+            </button>
+          </div>
+          <ul class="space-y-2">
+            @for (task of tasksDone; track task.id) {
+              <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 group min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
+                @if (editingId === task.id) {
+                  <div class="min-w-0 flex flex-col gap-2">
+                    <input
+                      type="text"
+                      [(ngModel)]="editTitleText"
+                      (keydown.enter)="saveEdit()"
+                      (keydown.escape)="cancelEdit()"
+                      class="w-full rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+                    />
+                    <input
+                      type="text"
+                      [(ngModel)]="editDescriptionText"
+                      (keydown.enter)="saveEdit()"
+                      (keydown.escape)="cancelEdit()"
+                      class="w-full rounded-lg bg-neutral-800 text-white px-3 py-2 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+                    />
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      (click)="saveEdit()"
+                      class="flex-1 rounded-lg bg-purple-500 text-white px-4 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300/60"
+                    >
+                      Save
+                    </button>
+                    <button
+                      type="button"
+                      (click)="cancelEdit()"
+                      class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-200 px-4 py-2.5 text-sm hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500/40"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                } @else {
+                  <div class="min-w-0">
+                    <div class="text-purple-100 font-medium break-words min-h-6">
+                      {{ task.title }}
+                    </div>
+                    <div class="text-purple-200/70 text-sm break-words min-h-4 mt-1">
+                      {{ task.description || ' ' }}
+                    </div>
+                  </div>
+                  <div class="flex gap-2">
+                    <button
+                      type="button"
+                      (click)="startEdit(task)"
+                      class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      (click)="removeTask(task.id)"
+                      class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                }
+              </li>
+            } @empty {
+              <li class="rounded-xl bg-neutral-900/20 border border-neutral-800 px-4 py-4 text-purple-200/70 text-sm text-center">
+                No completed tasks yet.
+              </li>
+            }
+          </ul>
+        </section>
+      </div>
+    }
   </div>
 </div>
