@@ -1,0 +1,68 @@
+<form (ngSubmit)="submitForm.emit()" class="flex flex-col gap-2">
+  <div class="flex gap-2">
+    <div class="flex-1 flex flex-col gap-1 min-w-0">
+      @if (showLabels) {
+        <label class="text-neutral-300 text-sm">Title</label>
+      }
+      <input
+        type="text"
+        [ngModel]="title"
+        (ngModelChange)="titleChange.emit($event)"
+        [ngModelOptions]="{ standalone: true }"
+        [placeholder]="titlePlaceholder"
+        class="w-full rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+      />
+    </div>
+
+    @if (showStatus) {
+      <div class="w-44 flex flex-col gap-1">
+        @if (showLabels) {
+          <label class="text-neutral-300 text-sm">Status</label>
+        }
+        <select
+          [ngModel]="status"
+          (ngModelChange)="statusChange.emit($event)"
+          [ngModelOptions]="{ standalone: true }"
+          aria-label="Task status"
+          class="w-full rounded-xl bg-neutral-800 text-white px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus-visible:outline-none"
+        >
+          <option value="todo">To be done</option>
+          <option value="doing">Working on it</option>
+          <option value="done">Done</option>
+        </select>
+      </div>
+    }
+  </div>
+
+  <div class="flex flex-col gap-1">
+    @if (showLabels) {
+      <label class="text-neutral-300 text-sm">Description</label>
+    }
+    <input
+      type="text"
+      [ngModel]="description"
+      (ngModelChange)="descriptionChange.emit($event)"
+      [ngModelOptions]="{ standalone: true }"
+      [placeholder]="descriptionPlaceholder"
+      class="w-full rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
+    />
+  </div>
+
+  <div class="flex gap-2 pt-2">
+    <button
+      type="button"
+      (click)="cancel.emit()"
+      class="flex-1 rounded-xl bg-neutral-800/60 text-neutral-200 px-4 py-2.5 text-sm hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500/40"
+    >
+      {{ cancelLabel }}
+    </button>
+    <button
+      type="submit"
+      [disabled]="disableSubmit"
+      class="flex-1 rounded-xl bg-purple-500 text-white px-4 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300/60 disabled:opacity-60 disabled:hover:bg-purple-500"
+    >
+      {{ submitLabel }}
+    </button>
+  </div>
+</form>
+

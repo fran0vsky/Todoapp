@@ -1,13 +1,12 @@
 import { Component } from '@angular/core';
-import { FormsModule } from '@angular/forms';
-
-type TaskStatus = 'todo' | 'doing' | 'done';
+import { AddEditTaskComponent } from './add-edit-task.component';
+import { BoardComponent } from './board.component';
+import { Task, TaskStatus } from './task.model';
 
 @Component({
-  imports: [FormsModule],
+  imports: [BoardComponent, AddEditTaskComponent],
   selector: 'app-root',
   templateUrl: './app.html',
-  styleUrl: './app.scss',
 })
 export class App {
   protected title = 'todo';
@@ -15,12 +14,7 @@ export class App {
   protected newTaskText = '';
   protected newTaskDescription = '';
   protected newTaskStatus: TaskStatus = 'todo';
-  protected tasks: {
-    id: number;
-    title: string;
-    description: string;
-    status: TaskStatus;
-  }[] = [];
+  protected tasks: Task[] = [];
   protected isLoading = true;
   protected editingId: number | null = null;
   protected editTitleText = '';
@@ -69,7 +63,7 @@ export class App {
     }
   }
 
-  protected startEdit(task: { id: number; title: string; description: string }): void {
+  protected startEdit(task: Task): void {
     this.editingId = task.id;
     this.editTitleText = task.title;
     this.editDescriptionText = task.description;
@@ -94,30 +88,15 @@ export class App {
     this.editDescriptionText = '';
   }
 
-  protected get tasksToBeDone(): {
-    id: number;
-    title: string;
-    description: string;
-    status: TaskStatus;
-  }[] {
+  protected get tasksToBeDone(): Task[] {
     return this.tasks.filter((t) => t.status === 'todo');
   }
 
-  protected get tasksWorkingOnIt(): {
-    id: number;
-    title: string;
-    description: string;
-    status: TaskStatus;
-  }[] {
+  protected get tasksWorkingOnIt(): Task[] {
     return this.tasks.filter((t) => t.status === 'doing');
   }
 
-  protected get tasksDone(): {
-    id: number;
-    title: string;
-    description: string;
-    status: TaskStatus;
-  }[] {
+  protected get tasksDone(): Task[] {
     return this.tasks.filter((t) => t.status === 'done');
   }
 

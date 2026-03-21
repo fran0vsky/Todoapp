@@ -1,0 +1,28 @@
+import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { TaskStatus } from './task.model';
+
+@Component({
+  selector: 'app-add-edit-task',
+  imports: [FormsModule],
+  templateUrl: './add-edit-task.component.html',
+})
+export class AddEditTaskComponent {
+  @Input() title = '';
+  @Input() description = '';
+  @Input() status: TaskStatus = 'todo';
+  @Input() showStatus = true;
+  @Input() showLabels = true;
+  @Input() submitLabel = 'Save';
+  @Input() cancelLabel = 'Cancel';
+  @Input() titlePlaceholder = 'Title...';
+  @Input() descriptionPlaceholder = 'Description (optional)...';
+  @Input() disableSubmit = false;
+
+  @Output() titleChange = new EventEmitter<string>();
+  @Output() descriptionChange = new EventEmitter<string>();
+  @Output() statusChange = new EventEmitter<TaskStatus>();
+  @Output() submitForm = new EventEmitter<void>();
+  @Output() cancel = new EventEmitter<void>();
+}
+
