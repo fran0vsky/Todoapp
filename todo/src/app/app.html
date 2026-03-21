@@ -13,7 +13,7 @@
       </button>
     </div>
 
-    @if (showAddForm) {
+    @if (showAddForm()) {
       <div class="fixed inset-0 bg-black/60 flex items-center justify-center p-6">
         <div class="w-full max-w-lg rounded-xl bg-neutral-900 border border-neutral-800 p-6 shadow-lg shadow-black/40">
           <div class="flex items-center justify-between mb-4">
@@ -28,17 +28,17 @@
           </div>
 
           <app-add-edit-task
-            [title]="newTaskText"
-            [description]="newTaskDescription"
-            [status]="newTaskStatus"
+            [title]="newTaskText()"
+            [description]="newTaskDescription()"
+            [status]="newTaskStatus()"
             [showStatus]="true"
             [showLabels]="true"
-            [disableSubmit]="!newTaskText.trim()"
+            [disableSubmit]="!newTaskText().trim()"
             submitLabel="Save"
             cancelLabel="Cancel"
-            (titleChange)="newTaskText = $event"
-            (descriptionChange)="newTaskDescription = $event"
-            (statusChange)="newTaskStatus = $event"
+            (titleChange)="newTaskText.set($event)"
+            (descriptionChange)="newTaskDescription.set($event)"
+            (statusChange)="newTaskStatus.set($event)"
             (submitForm)="addTask()"
             (cancel)="closeAddForm()"
           />
@@ -47,20 +47,20 @@
     }
 
     <app-board
-      [isLoading]="isLoading"
-      [editingId]="editingId"
-      [editTitleText]="editTitleText"
-      [editDescriptionText]="editDescriptionText"
-      [tasksToBeDone]="tasksToBeDone"
-      [tasksWorkingOnIt]="tasksWorkingOnIt"
-      [tasksDone]="tasksDone"
+      [isLoading]="isLoading()"
+      [editingId]="editingId()"
+      [editTitleText]="editTitleText()"
+      [editDescriptionText]="editDescriptionText()"
+      [tasksToBeDone]="tasksToBeDone()"
+      [tasksWorkingOnIt]="tasksWorkingOnIt()"
+      [tasksDone]="tasksDone()"
       (openAddWithStatus)="openAddFormWithStatus($event)"
       (startEdit)="startEdit($event)"
       (removeTask)="removeTask($event)"
       (saveEdit)="saveEdit()"
       (cancelEdit)="cancelEdit()"
-      (editTitleTextChange)="editTitleText = $event"
-      (editDescriptionTextChange)="editDescriptionText = $event"
+      (editTitleTextChange)="editTitleText.set($event)"
+      (editDescriptionTextChange)="editDescriptionText.set($event)"
     />
   </div>
 </div>
