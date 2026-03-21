@@ -15,21 +15,11 @@ export class App {
   protected newTaskDescription = signal('');
   protected newTaskStatus = signal<TaskStatus>('todo');
   protected tasks = signal<Task[]>([]);
-  protected isLoading = signal(true);
+  protected isLoading = signal(false);
   protected editingId = signal<number | null>(null);
   protected editTitleText = signal('');
   protected editDescriptionText = signal('');
   private nextId = 1;
-
-  constructor() {
-    this.loadTasks();
-  }
-
-  private loadTasks(): void {
-    setTimeout(() => {
-      this.isLoading.set(false);
-    }, 350);
-  }
 
   protected addTask(): void {
     const title = this.newTaskText().trim();
