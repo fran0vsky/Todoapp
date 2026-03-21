@@ -1,4 +1,4 @@
-<form (ngSubmit)="submitForm.emit()" class="flex flex-col gap-2">
+<form (submit)="onSubmit($event)" class="flex flex-col gap-2">
   <div class="flex gap-2">
     <div class="flex-1 flex flex-col gap-1 min-w-0">
       @if (showLabels) {
@@ -6,9 +6,8 @@
       }
       <input
         type="text"
-        [ngModel]="title"
-        (ngModelChange)="titleChange.emit($event)"
-        [ngModelOptions]="{ standalone: true }"
+        [value]="title"
+        (input)="onTitleInput($event)"
         [placeholder]="titlePlaceholder"
         class="w-full rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
       />
@@ -20,9 +19,8 @@
           <label class="text-neutral-300 text-sm">Status</label>
         }
         <select
-          [ngModel]="status"
-          (ngModelChange)="statusChange.emit($event)"
-          [ngModelOptions]="{ standalone: true }"
+          [value]="status"
+          (change)="onStatusInput($event)"
           aria-label="Task status"
           class="w-full rounded-xl bg-neutral-800 text-white px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus-visible:outline-none"
         >
@@ -40,9 +38,8 @@
     }
     <input
       type="text"
-      [ngModel]="description"
-      (ngModelChange)="descriptionChange.emit($event)"
-      [ngModelOptions]="{ standalone: true }"
+      [value]="description"
+      (input)="onDescriptionInput($event)"
       [placeholder]="descriptionPlaceholder"
       class="w-full rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
     />
