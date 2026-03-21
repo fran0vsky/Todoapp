@@ -24,9 +24,9 @@
           aria-label="Task status"
           class="w-full rounded-xl bg-neutral-800 text-white px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus-visible:outline-none"
         >
-          <option value="todo">To be done</option>
-          <option value="doing">Working on it</option>
-          <option value="done">Done</option>
+          <option [value]="TaskStatus.Todo">To be done</option>
+          <option [value]="TaskStatus.Doing">Working on it</option>
+          <option [value]="TaskStatus.Done">Done</option>
         </select>
       </div>
     }

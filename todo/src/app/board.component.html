@@ -14,7 +14,7 @@
         <h2 class="text-purple-100 font-semibold">To be done</h2>
         <button
           type="button"
-          (click)="openAddWithStatus.emit('todo')"
+          (click)="openAddWithStatus.emit(TaskStatus.Todo)"
           class="rounded-lg bg-purple-500/10 text-purple-200 px-3 py-1.5 text-xs font-medium hover:bg-purple-500/20 focus:outline-none focus:ring-2 focus:ring-purple-300/30"
         >
           + Add
@@ -73,7 +73,7 @@
         <h2 class="text-purple-200 font-semibold">Working on it</h2>
         <button
           type="button"
-          (click)="openAddWithStatus.emit('doing')"
+          (click)="openAddWithStatus.emit(TaskStatus.Doing)"
           class="rounded-lg bg-purple-500/15 text-purple-200 px-3 py-1.5 text-xs font-medium hover:bg-purple-500/25 focus:outline-none focus:ring-2 focus:ring-purple-300/30"
         >
           + Add
@@ -132,7 +132,7 @@
         <h2 class="text-purple-200 font-semibold">Done</h2>
         <button
           type="button"
-          (click)="openAddWithStatus.emit('done')"
+          (click)="openAddWithStatus.emit(TaskStatus.Done)"
           class="rounded-lg bg-purple-500/10 text-purple-200 px-3 py-1.5 text-xs font-medium hover:bg-purple-500/20 focus:outline-none focus:ring-2 focus:ring-purple-300/20"
         >
           + Add

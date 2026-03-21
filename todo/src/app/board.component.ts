@@ -8,6 +8,8 @@ import { Task, TaskStatus } from './task.model';
   templateUrl: './board.component.html',
 })
 export class BoardComponent {
+  protected readonly TaskStatus = TaskStatus;
+
   @Input() isLoading = false;
   @Input() editingId: number | null = null;
   @Input() editTitleText = '';

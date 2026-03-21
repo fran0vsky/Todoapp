@@ -13,7 +13,7 @@ export class App {
   protected showAddForm = signal(false);
   protected newTaskText = signal('');
   protected newTaskDescription = signal('');
-  protected newTaskStatus = signal<TaskStatus>('todo');
+  protected newTaskStatus = signal<TaskStatus>(TaskStatus.Todo);
   protected tasks = signal<Task[]>([]);
   protected isLoading = signal(false);
   protected editingId = signal<number | null>(null);
@@ -36,7 +36,7 @@ export class App {
     ]);
     this.newTaskText.set('');
     this.newTaskDescription.set('');
-    this.newTaskStatus.set('todo');
+    this.newTaskStatus.set(TaskStatus.Todo);
     this.showAddForm.set(false);
   }
 
@@ -44,7 +44,7 @@ export class App {
     this.showAddForm.set(false);
     this.newTaskText.set('');
     this.newTaskDescription.set('');
-    this.newTaskStatus.set('todo');
+    this.newTaskStatus.set(TaskStatus.Todo);
   }
 
   protected removeTask(id: number): void {
@@ -90,19 +90,19 @@ export class App {
   }
 
   protected tasksToBeDone = computed(() =>
-    this.tasks().filter((t) => t.status === 'todo')
+    this.tasks().filter((t) => t.status === TaskStatus.Todo)
   );
 
   protected tasksWorkingOnIt = computed(() =>
-    this.tasks().filter((t) => t.status === 'doing')
+    this.tasks().filter((t) => t.status === TaskStatus.Doing)
   );
 
   protected tasksDone = computed(() =>
-    this.tasks().filter((t) => t.status === 'done')
+    this.tasks().filter((t) => t.status === TaskStatus.Done)
   );
 
   protected openAddForm(): void {
-    this.newTaskStatus.set('todo');
+    this.newTaskStatus.set(TaskStatus.Todo);
     this.showAddForm.set(true);
   }
 

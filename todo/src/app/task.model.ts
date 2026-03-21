@@ -1,4 +1,8 @@
-export type TaskStatus = 'todo' | 'doing' | 'done';
+export enum TaskStatus {
+  Todo = 'todo',
+  Doing = 'doing',
+  Done = 'done',
+}
 
 export interface Task {
   id: number;

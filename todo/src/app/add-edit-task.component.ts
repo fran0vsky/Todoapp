@@ -6,9 +6,11 @@ import { TaskStatus } from './task.model';
   templateUrl: './add-edit-task.component.html',
 })
 export class AddEditTaskComponent {
+  protected readonly TaskStatus = TaskStatus;
+
   @Input() title = '';
   @Input() description = '';
-  @Input() status: TaskStatus = 'todo';
+  @Input() status: TaskStatus = TaskStatus.Todo;
   @Input() showStatus = true;
   @Input() showLabels = true;
   @Input() submitLabel = 'Save';
@@ -32,7 +34,14 @@ export class AddEditTaskComponent {
   }
 
   protected onStatusInput(event: Event): void {
-    this.statusChange.emit((event.target as HTMLSelectElement).value as TaskStatus);
+    const value = (event.target as HTMLSelectElement).value;
+    if (
+      value === TaskStatus.Todo ||
+      value === TaskStatus.Doing ||
+      value === TaskStatus.Done
+    ) {
+      this.statusChange.emit(value);
+    }
   }
 
   protected onSubmit(event: Event): void {
