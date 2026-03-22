@@ -38,22 +38,72 @@
     @if (showLabels) {
       <label class="text-neutral-300 text-sm">Description</label>
     }
-    <input
-      type="text"
-      [value]="description"
-      (input)="onDescriptionInput($event)"
-      [placeholder]="descriptionPlaceholder"
-      class="w-full rounded-xl bg-neutral-800 text-white placeholder-neutral-500 px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent focus-visible:outline-none"
-    />
+    <div
+      class="rounded-xl border border-neutral-700 bg-neutral-800 overflow-hidden focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent"
+    >
+      <div
+        class="flex flex-wrap gap-1 border-b border-neutral-700 bg-neutral-900/60 px-2 py-1.5"
+        role="toolbar"
+        aria-label="Text formatting"
+      >
+        <button
+          type="button"
+          class="rounded-md px-2 py-1 text-xs font-semibold text-neutral-200 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400/50"
+          aria-label="Bold"
+          (mousedown)="$event.preventDefault()"
+          (click)="exec('bold')"
+        >
+          B
+        </button>
+        <button
+          type="button"
+          class="rounded-md px-2 py-1 text-xs italic text-neutral-200 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400/50"
+          aria-label="Italic"
+          (mousedown)="$event.preventDefault()"
+          (click)="exec('italic')"
+        >
+          I
+        </button>
+        <button
+          type="button"
+          class="rounded-md px-2 py-1 text-xs underline text-neutral-200 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400/50"
+          aria-label="Underline"
+          (mousedown)="$event.preventDefault()"
+          (click)="exec('underline')"
+        >
+          U
+        </button>
+        <button
+          type="button"
+          class="rounded-md px-2 py-1 text-xs text-neutral-200 hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400/50"
+          aria-label="Bullet list"
+          (mousedown)="$event.preventDefault()"
+          (click)="exec('insertUnorderedList')"
+        >
+          • List
+        </button>
+      </div>
+      <div
+        #descEditor
+        contenteditable="true"
+        role="textbox"
+        tabindex="0"
+        [attr.data-placeholder]="descriptionPlaceholder"
+        (input)="onRichInput()"
+        (focus)="onRichFocus()"
+        (blur)="onRichBlur()"
+        class="add-edit-rich-editor min-h-[120px] max-h-56 overflow-y-auto px-4 py-3 text-sm text-white outline-none [&_a]:text-purple-300 [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+      ></div>
+    </div>
   </div>
 
   <div class="flex gap-2 pt-2">
     <button
       type="button"
-      (click)="cancel.emit()"
+      (click)="onClearClick()"
       class="flex-1 rounded-xl bg-neutral-800/60 text-neutral-200 px-4 py-2.5 text-sm hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-neutral-500/40"
     >
-      {{ cancelLabel }}
+      {{ clearLabel }}
     </button>
     <button
       type="submit"
@@ -64,4 +114,3 @@
     </button>
   </div>
 </form>
-

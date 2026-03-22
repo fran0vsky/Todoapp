@@ -20,6 +20,10 @@ export class App {
   protected editingId = signal<number | null>(null);
   protected editTitleText = signal('');
   protected editDescriptionText = signal('');
+  private readonly editBaseline = signal<{
+    title: string;
+    description: string;
+  } | null>(null);
   private nextId = 1;
 
   /** At most one task may be in "Work in progress" at a time. */
@@ -59,12 +63,20 @@ export class App {
     this.newTaskStatus.set(TaskStatus.Todo);
   }
 
+  /** Reset add form fields without closing the modal. */
+  protected resetAddForm(): void {
+    this.newTaskText.set('');
+    this.newTaskDescription.set('');
+    this.newTaskStatus.set(TaskStatus.Todo);
+  }
+
   protected removeTask(id: number): void {
     this.tasks.update((current) => current.filter((t) => t.id !== id));
     if (this.editingId() === id) {
       this.editingId.set(null);
       this.editTitleText.set('');
       this.editDescriptionText.set('');
+      this.editBaseline.set(null);
     }
   }
 
@@ -72,6 +84,10 @@ export class App {
     this.editingId.set(task.id);
     this.editTitleText.set(task.title);
     this.editDescriptionText.set(task.description);
+    this.editBaseline.set({
+      title: task.title,
+      description: task.description,
+    });
   }
 
   protected saveEdit(): void {
@@ -93,12 +109,15 @@ export class App {
     this.editingId.set(null);
     this.editTitleText.set('');
     this.editDescriptionText.set('');
+    this.editBaseline.set(null);
   }
 
-  protected cancelEdit(): void {
-    this.editingId.set(null);
-    this.editTitleText.set('');
-    this.editDescriptionText.set('');
+  /** Reset inline edit fields to last saved values (stay in edit mode). */
+  protected clearEditFields(): void {
+    const b = this.editBaseline();
+    if (!b) return;
+    this.editTitleText.set(b.title);
+    this.editDescriptionText.set(b.description);
   }
 
   protected tasksToBeDone = computed(() =>

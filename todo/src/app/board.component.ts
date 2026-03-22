@@ -1,10 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { AddEditTaskComponent } from './add-edit-task.component';
+import { SafeHtmlPipe } from './safe-html.pipe';
 import { Task, TaskStatus } from './task.model';
 
 @Component({
   selector: 'app-board',
-  imports: [AddEditTaskComponent],
+  imports: [AddEditTaskComponent, SafeHtmlPipe],
   templateUrl: './board.component.html',
 })
 export class BoardComponent {
@@ -23,7 +24,7 @@ export class BoardComponent {
   @Output() startEdit = new EventEmitter<Task>();
   @Output() removeTask = new EventEmitter<number>();
   @Output() saveEdit = new EventEmitter<void>();
-  @Output() cancelEdit = new EventEmitter<void>();
+  @Output() clearEditFields = new EventEmitter<void>();
   @Output() editTitleTextChange = new EventEmitter<string>();
   @Output() editDescriptionTextChange = new EventEmitter<string>();
 }
