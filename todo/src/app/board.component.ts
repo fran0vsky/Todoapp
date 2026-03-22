@@ -11,6 +11,7 @@ export class BoardComponent {
   protected readonly TaskStatus = TaskStatus;
 
   @Input() isLoading = false;
+  @Input() workInProgressFull = false;
   @Input() editingId: number | null = null;
   @Input() editTitleText = '';
   @Input() editDescriptionText = '';

@@ -18,6 +18,8 @@ export class AddEditTaskComponent {
   @Input() titlePlaceholder = 'Title...';
   @Input() descriptionPlaceholder = 'Description (optional)...';
   @Input() disableSubmit = false;
+  /** When true, "Work in progress" cannot be selected (WIP column is full). */
+  @Input() disableDoingStatus = false;
 
   @Output() titleChange = new EventEmitter<string>();
   @Output() descriptionChange = new EventEmitter<string>();

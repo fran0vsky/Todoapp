@@ -9,6 +9,7 @@ import { Task, TaskStatus } from './task.model';
   templateUrl: './app.html',
 })
 export class App {
+  protected readonly TaskStatus = TaskStatus;
   protected title = 'todo';
   protected showAddForm = signal(false);
   protected newTaskText = signal('');
@@ -21,9 +22,20 @@ export class App {
   protected editDescriptionText = signal('');
   private nextId = 1;
 
+  /** At most one task may be in "Work in progress" at a time. */
+  protected workInProgressFull = computed(
+    () =>
+      this.tasks().filter((t) => t.status === TaskStatus.Doing).length >= 1
+  );
+
   protected addTask(): void {
     const title = this.newTaskText().trim();
     if (!title) return;
+
+    const status = this.newTaskStatus();
+    if (status === TaskStatus.Doing && this.workInProgressFull()) {
+      return;
+    }
 
     this.tasks.update((current) => [
       ...current,
@@ -31,7 +43,7 @@ export class App {
         id: this.nextId++,
         title,
         description: this.newTaskDescription().trim(),
-        status: this.newTaskStatus(),
+        status,
       },
     ]);
     this.newTaskText.set('');
@@ -107,6 +119,9 @@ export class App {
   }
 
   protected openAddFormWithStatus(status: TaskStatus): void {
+    if (status === TaskStatus.Doing && this.workInProgressFull()) {
+      return;
+    }
     this.newTaskStatus.set(status);
     this.showAddForm.set(true);
   }
