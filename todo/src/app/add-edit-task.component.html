@@ -36,7 +36,13 @@
 
   <div class="flex flex-col gap-1">
     @if (showLabels) {
-      <label class="text-neutral-300 text-sm">Description</label>
+      <label class="text-neutral-300 text-sm">
+        Description
+        @if (descriptionRequired) {
+          <span class="text-amber-200/90" aria-hidden="true">*</span>
+          <span class="sr-only">(required)</span>
+        }
+      </label>
     }
     <div
       class="rounded-xl border border-neutral-700 bg-neutral-800 overflow-hidden focus-within:ring-2 focus-within:ring-purple-400 focus-within:border-transparent"
@@ -107,10 +113,48 @@
     </button>
     <button
       type="submit"
-      [disabled]="disableSubmit"
-      class="flex-1 rounded-xl bg-purple-500 text-white px-4 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300/60 disabled:opacity-60 disabled:hover:bg-purple-500"
+      [attr.aria-disabled]="disableSubmit"
+      [attr.tabindex]="disableSubmit ? -1 : null"
+      [attr.title]="disableSubmit && saveDisabledHint ? saveDisabledHint : null"
+      class="flex-1 rounded-xl bg-purple-500 text-white px-4 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-purple-300/60 aria-disabled:opacity-60 aria-disabled:cursor-not-allowed aria-disabled:hover:bg-purple-500 hover:bg-purple-400"
     >
       {{ submitLabel }}
     </button>
   </div>
+
+  @if (submitBlockedBanner(); as banner) {
+    <div
+      role="alert"
+      aria-live="polite"
+      class="flex gap-2.5 rounded-xl border border-amber-500/45 bg-amber-950/50 px-3 py-2.5 text-amber-50 shadow-sm shadow-amber-900/20"
+    >
+      <span
+        class="shrink-0 text-amber-300 mt-0.5"
+        aria-hidden="true"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          class="h-5 w-5"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 10-2 0 1 1 0 002 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </span>
+      <div class="min-w-0 flex-1">
+        <p class="text-sm font-semibold text-amber-100 leading-snug">
+          {{ banner.headline }}
+        </p>
+        @if (banner.detail) {
+          <p class="text-xs text-amber-200/85 mt-1 leading-relaxed">
+            {{ banner.detail }}
+          </p>
+        }
+      </div>
+    </div>
+  }
 </form>

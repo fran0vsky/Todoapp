@@ -2,6 +2,7 @@ import { Component, computed, signal } from '@angular/core';
 import { AddEditTaskComponent } from './add-edit-task.component';
 import { BoardComponent } from './board.component';
 import { Task, TaskStatus } from './task.model';
+import { hasTaskDescription } from './task-description.util';
 
 @Component({
   imports: [BoardComponent, AddEditTaskComponent],
@@ -10,6 +11,7 @@ import { Task, TaskStatus } from './task.model';
 })
 export class App {
   protected readonly TaskStatus = TaskStatus;
+  protected readonly hasTaskDescription = hasTaskDescription;
   protected title = 'todo';
   protected showAddForm = signal(false);
   protected newTaskText = signal('');
@@ -35,6 +37,7 @@ export class App {
   protected addTask(): void {
     const title = this.newTaskText().trim();
     if (!title) return;
+    if (!hasTaskDescription(this.newTaskDescription())) return;
 
     const status = this.newTaskStatus();
     if (status === TaskStatus.Doing && this.workInProgressFull()) {
@@ -93,6 +96,7 @@ export class App {
   protected saveEdit(): void {
     const currentEditingId = this.editingId();
     if (currentEditingId == null) return;
+    if (!hasTaskDescription(this.editDescriptionText())) return;
 
     this.tasks.update((current) =>
       current.map((task) => {
@@ -143,5 +147,33 @@ export class App {
     }
     this.newTaskStatus.set(status);
     this.showAddForm.set(true);
+  }
+
+  /** Tooltip when Add-task Save is inactive (hover to see). */
+  protected addFormSaveDisabledHint(): string {
+    if (!this.newTaskText().trim()) {
+      return 'Enter a title first.';
+    }
+    if (!hasTaskDescription(this.newTaskDescription())) {
+      return 'Description is required — fill in the description field before saving.';
+    }
+    if (this.newTaskStatus() === TaskStatus.Doing && this.workInProgressFull()) {
+      return 'Work in progress is full. Only one task allowed there.';
+    }
+    return '';
+  }
+
+  /** Short banner headline when Add save is blocked. */
+  protected addFormSaveBlockedTitle(): string {
+    if (!this.newTaskText().trim()) {
+      return 'Title required!';
+    }
+    if (!hasTaskDescription(this.newTaskDescription())) {
+      return 'Description required!';
+    }
+    if (this.newTaskStatus() === TaskStatus.Doing && this.workInProgressFull()) {
+      return 'Work in progress is full';
+    }
+    return '';
   }
 }

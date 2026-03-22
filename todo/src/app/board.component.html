@@ -35,7 +35,15 @@
                 [description]="editDescriptionText"
                 [showStatus]="false"
                 [showLabels]="false"
-                [disableSubmit]="!editTitleText.trim()"
+                [disableSubmit]="
+                  !editTitleText.trim() || !hasTaskDescription(editDescriptionText)
+                "
+                [saveDisabledHint]="
+                  editSaveDisabledHint(editTitleText, editDescriptionText)
+                "
+                [saveBlockedAlertTitle]="
+                  editSaveBlockedTitle(editTitleText, editDescriptionText)
+                "
                 submitLabel="Save"
                 clearLabel="Clear"
                 (titleChange)="editTitleTextChange.emit($event)"
@@ -108,7 +116,15 @@
                 [description]="editDescriptionText"
                 [showStatus]="false"
                 [showLabels]="false"
-                [disableSubmit]="!editTitleText.trim()"
+                [disableSubmit]="
+                  !editTitleText.trim() || !hasTaskDescription(editDescriptionText)
+                "
+                [saveDisabledHint]="
+                  editSaveDisabledHint(editTitleText, editDescriptionText)
+                "
+                [saveBlockedAlertTitle]="
+                  editSaveBlockedTitle(editTitleText, editDescriptionText)
+                "
                 submitLabel="Save"
                 clearLabel="Clear"
                 (titleChange)="editTitleTextChange.emit($event)"
@@ -176,7 +192,15 @@
                 [description]="editDescriptionText"
                 [showStatus]="false"
                 [showLabels]="false"
-                [disableSubmit]="!editTitleText.trim()"
+                [disableSubmit]="
+                  !editTitleText.trim() || !hasTaskDescription(editDescriptionText)
+                "
+                [saveDisabledHint]="
+                  editSaveDisabledHint(editTitleText, editDescriptionText)
+                "
+                [saveBlockedAlertTitle]="
+                  editSaveBlockedTitle(editTitleText, editDescriptionText)
+                "
                 submitLabel="Save"
                 clearLabel="Clear"
                 (titleChange)="editTitleTextChange.emit($event)"

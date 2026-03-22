@@ -50,8 +50,11 @@
             [disableDoingStatus]="workInProgressFull()"
             [disableSubmit]="
               !newTaskText().trim() ||
+              !hasTaskDescription(newTaskDescription()) ||
               (newTaskStatus() === TaskStatus.Doing && workInProgressFull())
             "
+            [saveDisabledHint]="addFormSaveDisabledHint()"
+            [saveBlockedAlertTitle]="addFormSaveBlockedTitle()"
             submitLabel="Save"
             (titleChange)="newTaskText.set($event)"
             (descriptionChange)="newTaskDescription.set($event)"
