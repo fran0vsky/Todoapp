@@ -29,53 +29,29 @@
       <ul class="space-y-2">
         @for (task of tasksToBeDone; track task.id) {
           <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
-            @if (editingId === task.id) {
-              <app-add-edit-task
-                [title]="editTitleText"
-                [description]="editDescriptionText"
-                [showStatus]="false"
-                [showLabels]="false"
-                [disableSubmit]="
-                  !editTitleText.trim() || !hasTaskDescription(editDescriptionText)
-                "
-                [saveDisabledHint]="
-                  editSaveDisabledHint(editTitleText, editDescriptionText)
-                "
-                [saveBlockedAlertTitle]="
-                  editSaveBlockedTitle(editTitleText, editDescriptionText)
-                "
-                submitLabel="Save"
-                clearLabel="Clear"
-                (titleChange)="editTitleTextChange.emit($event)"
-                (descriptionChange)="editDescriptionTextChange.emit($event)"
-                (submitForm)="saveEdit.emit()"
-                (clear)="clearEditFields.emit()"
-              />
-            } @else {
-              <div class="min-w-0">
-                <div class="text-purple-100 font-medium break-words min-h-6">{{ task.title }}</div>
-                <div
-                  class="text-purple-200/70 text-sm break-words min-h-4 mt-1 [&_a]:text-purple-300 [&_a]:underline"
-                  [innerHTML]="task.description | safeHtml"
-                ></div>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  (click)="startEdit.emit(task)"
-                  class="flex-1 rounded-lg bg-neutral-800/70 text-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  (click)="removeTask.emit(task.id)"
-                  class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
-                >
-                  Remove
-                </button>
-              </div>
-            }
+            <div class="min-w-0">
+              <div class="text-purple-100 font-medium break-words min-h-6">{{ task.title }}</div>
+              <div
+                class="text-purple-200/70 text-sm break-words min-h-4 mt-1 [&_a]:text-purple-300 [&_a]:underline"
+                [innerHTML]="task.description | safeHtml"
+              ></div>
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                (click)="startEdit.emit(task)"
+                class="flex-1 rounded-lg bg-neutral-800/70 text-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                (click)="removeTask.emit(task.id)"
+                class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
+              >
+                Remove
+              </button>
+            </div>
           </li>
         } @empty {
           <li class="rounded-xl bg-neutral-900/20 border border-neutral-800 px-4 py-4 text-purple-200/70 text-sm text-center">
@@ -110,53 +86,29 @@
       <ul class="space-y-2">
         @for (task of tasksWorkingOnIt; track task.id) {
           <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
-            @if (editingId === task.id) {
-              <app-add-edit-task
-                [title]="editTitleText"
-                [description]="editDescriptionText"
-                [showStatus]="false"
-                [showLabels]="false"
-                [disableSubmit]="
-                  !editTitleText.trim() || !hasTaskDescription(editDescriptionText)
-                "
-                [saveDisabledHint]="
-                  editSaveDisabledHint(editTitleText, editDescriptionText)
-                "
-                [saveBlockedAlertTitle]="
-                  editSaveBlockedTitle(editTitleText, editDescriptionText)
-                "
-                submitLabel="Save"
-                clearLabel="Clear"
-                (titleChange)="editTitleTextChange.emit($event)"
-                (descriptionChange)="editDescriptionTextChange.emit($event)"
-                (submitForm)="saveEdit.emit()"
-                (clear)="clearEditFields.emit()"
-              />
-            } @else {
-              <div class="min-w-0">
-                <div class="text-purple-100 font-medium break-words min-h-6">{{ task.title }}</div>
-                <div
-                  class="text-purple-200/70 text-sm break-words min-h-4 mt-1 [&_a]:text-purple-300 [&_a]:underline"
-                  [innerHTML]="task.description | safeHtml"
-                ></div>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  (click)="startEdit.emit(task)"
-                  class="flex-1 rounded-lg bg-neutral-800/70 text-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  (click)="removeTask.emit(task.id)"
-                  class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
-                >
-                  Remove
-                </button>
-              </div>
-            }
+            <div class="min-w-0">
+              <div class="text-purple-100 font-medium break-words min-h-6">{{ task.title }}</div>
+              <div
+                class="text-purple-200/70 text-sm break-words min-h-4 mt-1 [&_a]:text-purple-300 [&_a]:underline"
+                [innerHTML]="task.description | safeHtml"
+              ></div>
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                (click)="startEdit.emit(task)"
+                class="flex-1 rounded-lg bg-neutral-800/70 text-neutral-200 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                (click)="removeTask.emit(task.id)"
+                class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
+              >
+                Remove
+              </button>
+            </div>
           </li>
         } @empty {
           <li class="rounded-xl bg-neutral-900/20 border border-neutral-800 px-4 py-4 text-purple-200/70 text-sm text-center">
@@ -186,53 +138,37 @@
       <ul class="space-y-2">
         @for (task of tasksDone; track task.id) {
           <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
-            @if (editingId === task.id) {
-              <app-add-edit-task
-                [title]="editTitleText"
-                [description]="editDescriptionText"
-                [showStatus]="false"
-                [showLabels]="false"
-                [disableSubmit]="
-                  !editTitleText.trim() || !hasTaskDescription(editDescriptionText)
-                "
-                [saveDisabledHint]="
-                  editSaveDisabledHint(editTitleText, editDescriptionText)
-                "
-                [saveBlockedAlertTitle]="
-                  editSaveBlockedTitle(editTitleText, editDescriptionText)
-                "
-                submitLabel="Save"
-                clearLabel="Clear"
-                (titleChange)="editTitleTextChange.emit($event)"
-                (descriptionChange)="editDescriptionTextChange.emit($event)"
-                (submitForm)="saveEdit.emit()"
-                (clear)="clearEditFields.emit()"
-              />
-            } @else {
-              <div class="min-w-0">
-                <div class="text-purple-100 font-medium break-words min-h-6">{{ task.title }}</div>
-                <div
-                  class="text-purple-200/70 text-sm break-words min-h-4 mt-1 [&_a]:text-purple-300 [&_a]:underline"
-                  [innerHTML]="task.description | safeHtml"
-                ></div>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  type="button"
-                  (click)="startEdit.emit(task)"
-                  class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
-                >
-                  Edit
-                </button>
-                <button
-                  type="button"
-                  (click)="removeTask.emit(task.id)"
-                  class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
-                >
-                  Remove
-                </button>
-              </div>
-            }
+            <div class="min-w-0">
+              <div class="text-purple-100 font-medium break-words min-h-6">{{ task.title }}</div>
+              <div
+                class="text-purple-200/70 text-sm break-words min-h-4 mt-1 [&_a]:text-purple-300 [&_a]:underline"
+                [innerHTML]="task.description | safeHtml"
+              ></div>
+            </div>
+            <div class="flex gap-2">
+              <button
+                type="button"
+                (click)="startEdit.emit(task)"
+                class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-300 px-4 py-2 text-sm font-medium hover:bg-neutral-700 hover:text-white focus:outline-none focus:ring-2 focus:ring-purple-300/20"
+              >
+                Edit
+              </button>
+              <button
+                type="button"
+                (click)="archiveTask.emit(task.id)"
+                title="Archive this task"
+                class="flex-1 rounded-lg bg-neutral-800/60 text-amber-300/80 px-4 py-2 text-sm hover:bg-amber-900/30 hover:text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-400/20"
+              >
+                Archive
+              </button>
+              <button
+                type="button"
+                (click)="removeTask.emit(task.id)"
+                class="flex-1 rounded-lg bg-neutral-800/60 text-neutral-400 px-4 py-2 text-sm hover:bg-red-900/40 hover:text-white focus:outline-none focus:ring-2 focus:ring-red-400/20"
+              >
+                Remove
+              </button>
+            </div>
           </li>
         } @empty {
           <li class="rounded-xl bg-neutral-900/20 border border-neutral-800 px-4 py-4 text-purple-200/70 text-sm text-center">
@@ -243,4 +179,3 @@
     </section>
   </div>
 }
-

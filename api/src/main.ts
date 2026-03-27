@@ -1,13 +1,7 @@
 import express from 'express';
+import { supabase } from './supabase';
 
 type TaskStatus = 'todo' | 'doing' | 'done';
-
-type Task = {
-  id: number;
-  title: string;
-  description: string;
-  status: TaskStatus;
-};
 
 type CreateTaskBody = {
   title?: unknown;
@@ -21,12 +15,14 @@ type UpdateTaskBody = {
   status?: unknown;
 };
 
+const isTaskStatus = (value: unknown): value is TaskStatus =>
+  value === 'todo' || value === 'doing' || value === 'done';
+
 const app = express();
-const port = process.env.PORT ?? 3333;
+const port = process.env['PORT'] ?? 3333;
 
 app.use(express.json());
 
-// Allow local frontend dev server access.
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
@@ -38,21 +34,27 @@ app.use((req, res, next) => {
   next();
 });
 
-const tasks: Task[] = [];
-let nextId = 1;
-
-const isTaskStatus = (value: unknown): value is TaskStatus =>
-  value === 'todo' || value === 'doing' || value === 'done';
-
-app.get('/api/health', (req, res) => {
+app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
 
-app.get('/api/tasks', (req, res) => {
-  res.json(tasks);
+// ---------- TASKS ----------
+
+app.get('/api/tasks', async (_req, res) => {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id, title, description, status')
+    .eq('archived', false)
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json(data);
 });
 
-app.post('/api/tasks', (req, res) => {
+app.post('/api/tasks', async (req, res) => {
   const body = req.body as CreateTaskBody;
   const title = typeof body.title === 'string' ? body.title.trim() : '';
   const description =
@@ -63,44 +65,40 @@ app.post('/api/tasks', (req, res) => {
     res.status(400).json({ error: 'title is required' });
     return;
   }
-
   if (!isTaskStatus(status)) {
     res.status(400).json({ error: 'status must be todo, doing, or done' });
     return;
   }
 
-  const task: Task = {
-    id: nextId++,
-    title,
-    description,
-    status,
-  };
+  const { data, error } = await supabase
+    .from('tasks')
+    .insert({ title, description, status })
+    .select('id, title, description, status')
+    .single();
 
-  tasks.push(task);
-  res.status(201).json(task);
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.status(201).json(data);
 });
 
-app.patch('/api/tasks/:id', (req, res) => {
-  const id = Number(req.params.id);
+app.patch('/api/tasks/:id', async (req, res) => {
+  const id = Number(req.params['id']);
   if (!Number.isInteger(id) || id <= 0) {
     res.status(400).json({ error: 'invalid task id' });
     return;
   }
 
-  const task = tasks.find((t) => t.id === id);
-  if (!task) {
-    res.status(404).json({ error: 'task not found' });
-    return;
-  }
-
   const body = req.body as UpdateTaskBody;
+  const updates: Record<string, unknown> = {};
 
   if (body.title !== undefined) {
     if (typeof body.title !== 'string' || !body.title.trim()) {
       res.status(400).json({ error: 'title must be a non-empty string' });
       return;
     }
-    task.title = body.title.trim();
+    updates['title'] = body.title.trim();
   }
 
   if (body.description !== undefined) {
@@ -108,7 +106,7 @@ app.patch('/api/tasks/:id', (req, res) => {
       res.status(400).json({ error: 'description must be a string' });
       return;
     }
-    task.description = body.description.trim();
+    updates['description'] = body.description.trim();
   }
 
   if (body.status !== undefined) {
@@ -116,26 +114,103 @@ app.patch('/api/tasks/:id', (req, res) => {
       res.status(400).json({ error: 'status must be todo, doing, or done' });
       return;
     }
-    task.status = body.status;
+    updates['status'] = body.status;
   }
 
-  res.json(task);
+  if (Object.keys(updates).length === 0) {
+    res.status(400).json({ error: 'no fields to update' });
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('tasks')
+    .update(updates)
+    .eq('id', id)
+    .select('id, title, description, status')
+    .single();
+
+  if (error) {
+    res.status(error.code === 'PGRST116' ? 404 : 500).json({
+      error: error.code === 'PGRST116' ? 'task not found' : error.message,
+    });
+    return;
+  }
+  res.json(data);
 });
 
-app.delete('/api/tasks/:id', (req, res) => {
-  const id = Number(req.params.id);
+app.get('/api/tasks/archived', async (_req, res) => {
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('id, title, description, status, created_at')
+    .eq('archived', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json(data);
+});
+
+app.patch('/api/tasks/:id/restore', async (req, res) => {
+  const id = Number(req.params['id']);
   if (!Number.isInteger(id) || id <= 0) {
     res.status(400).json({ error: 'invalid task id' });
     return;
   }
 
-  const index = tasks.findIndex((t) => t.id === id);
-  if (index === -1) {
-    res.status(404).json({ error: 'task not found' });
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ archived: false })
+    .eq('id', id)
+    .select('id, title, description, status')
+    .single();
+
+  if (error) {
+    res.status(error.code === 'PGRST116' ? 404 : 500).json({
+      error: error.code === 'PGRST116' ? 'task not found' : error.message,
+    });
+    return;
+  }
+  res.json(data);
+});
+
+app.patch('/api/tasks/:id/archive', async (req, res) => {
+  const id = Number(req.params['id']);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: 'invalid task id' });
     return;
   }
 
-  tasks.splice(index, 1);
+  const { data, error } = await supabase
+    .from('tasks')
+    .update({ archived: true })
+    .eq('id', id)
+    .select('id')
+    .single();
+
+  if (error) {
+    res.status(error.code === 'PGRST116' ? 404 : 500).json({
+      error: error.code === 'PGRST116' ? 'task not found' : error.message,
+    });
+    return;
+  }
+  res.json({ archived: true, id: data.id });
+});
+
+app.delete('/api/tasks/:id', async (req, res) => {
+  const id = Number(req.params['id']);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: 'invalid task id' });
+    return;
+  }
+
+  const { error } = await supabase.from('tasks').delete().eq('id', id);
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
   res.status(204).send();
 });
 

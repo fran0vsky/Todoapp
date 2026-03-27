@@ -3,24 +3,32 @@
     <div class="flex items-start justify-between gap-4 mb-6">
       <h1 class="text-3xl font-semibold text-white leading-tight">Simple Worflow Menager</h1>
 
-      <!-- Top Add button (opens modal form) -->
-      <button
-        type="button"
-        (click)="openAddForm()"
-        class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow shrink-0"
-      >
-        Add
-      </button>
+      <div class="flex items-center gap-3 shrink-0">
+        <button
+          type="button"
+          (click)="openArchive()"
+          class="rounded-xl bg-neutral-800 text-amber-200 px-5 py-3 font-medium hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-amber-300/40 shadow-sm hover:shadow-md transition-shadow"
+        >
+          Archive
+        </button>
+        <button
+          type="button"
+          (click)="openAddForm()"
+          class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow"
+        >
+          Add
+        </button>
+      </div>
     </div>
 
-    @if (showAddForm()) {
+    @if (showFormModal()) {
       <div class="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50">
         <div
           class="relative w-full max-w-2xl rounded-xl bg-neutral-900 border border-neutral-800 p-6 pt-14 shadow-lg shadow-black/40"
         >
           <button
             type="button"
-            (click)="closeAddForm()"
+            (click)="closeFormModal()"
             class="absolute top-3 right-3 rounded-lg p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-300/50"
             aria-label="Close"
           >
@@ -39,28 +47,26 @@
             </svg>
           </button>
 
-          <h2 class="text-neutral-200 font-medium mb-4 pr-10">Add task</h2>
+          <h2 class="text-neutral-200 font-medium mb-4 pr-10">
+            {{ formModalTitle() }}
+          </h2>
 
           <app-add-edit-task
-            [title]="newTaskText()"
-            [description]="newTaskDescription()"
-            [status]="newTaskStatus()"
+            [title]="formTitle()"
+            [description]="formDescription()"
+            [status]="formStatus()"
             [showStatus]="true"
             [showLabels]="true"
-            [disableDoingStatus]="workInProgressFull()"
-            [disableSubmit]="
-              !newTaskText().trim() ||
-              !hasTaskDescription(newTaskDescription()) ||
-              (newTaskStatus() === TaskStatus.Doing && workInProgressFull())
-            "
-            [saveDisabledHint]="addFormSaveDisabledHint()"
-            [saveBlockedAlertTitle]="addFormSaveBlockedTitle()"
+            [disableDoingStatus]="disableDoingInForm()"
+            [disableSubmit]="formSubmitDisabled()"
+            [saveDisabledHint]="formSaveDisabledHint()"
+            [saveBlockedAlertTitle]="formSaveBlockedTitle()"
             submitLabel="Save"
-            (titleChange)="newTaskText.set($event)"
-            (descriptionChange)="newTaskDescription.set($event)"
-            (statusChange)="newTaskStatus.set($event)"
-            (submitForm)="addTask()"
-            (clear)="resetAddForm()"
+            (titleChange)="formTitle.set($event)"
+            (descriptionChange)="formDescription.set($event)"
+            (statusChange)="formStatus.set($event)"
+            (submitForm)="submitForm()"
+            (clear)="resetFormFields()"
           />
           @if (workInProgressFull()) {
             <p class="text-amber-200/80 text-xs mt-3" role="status">
@@ -72,11 +78,90 @@
       </div>
     }
 
+    @if (showArchive()) {
+      <div class="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50">
+        <div
+          class="relative w-full max-w-2xl max-h-[85vh] flex flex-col rounded-xl bg-neutral-900 border border-neutral-800 shadow-lg shadow-black/40"
+        >
+          <div class="flex items-center justify-between p-6 pb-0">
+            <h2 class="text-neutral-200 font-medium">Archived tasks</h2>
+            <button
+              type="button"
+              (click)="closeArchive()"
+              class="rounded-lg p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-300/50"
+              aria-label="Close"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <div class="flex-1 overflow-y-auto p-6 pt-4">
+            @if (archiveLoading()) {
+              <div
+                class="flex items-center justify-center gap-3 text-neutral-400 py-8"
+              >
+                <span
+                  class="inline-block w-5 h-5 border-2 border-neutral-500 border-t-amber-200 rounded-full animate-spin"
+                ></span>
+                <span>Loading archive...</span>
+              </div>
+            } @else if (archivedTasks().length === 0) {
+              <p class="text-neutral-500 text-sm text-center py-8">
+                No archived tasks.
+              </p>
+            } @else {
+              <ul class="space-y-3">
+                @for (task of archivedTasks(); track task.id) {
+                  <li
+                    class="rounded-xl bg-neutral-800/70 border border-neutral-700 px-5 py-4 flex items-start gap-4"
+                  >
+                    <div class="flex-1 min-w-0">
+                      <div
+                        class="text-neutral-200 font-medium break-words"
+                      >
+                        {{ task.title }}
+                      </div>
+                      <div
+                        class="text-neutral-400 text-sm break-words mt-1"
+                      >
+                        {{ task.description }}
+                      </div>
+                      <span
+                        class="inline-block mt-2 rounded-md bg-neutral-700/60 text-neutral-400 text-xs px-2 py-0.5"
+                      >
+                        was: {{ task.status }}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      (click)="restoreTask(task.id)"
+                      class="shrink-0 rounded-lg bg-amber-500/15 text-amber-200 px-4 py-2 text-sm font-medium hover:bg-amber-500/25 hover:text-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-300/30"
+                    >
+                      Restore
+                    </button>
+                  </li>
+                }
+              </ul>
+            }
+          </div>
+        </div>
+      </div>
+    }
+
     <app-board
       [isLoading]="isLoading()"
-      [editingId]="editingId()"
-      [editTitleText]="editTitleText()"
-      [editDescriptionText]="editDescriptionText()"
       [tasksToBeDone]="tasksToBeDone()"
       [workInProgressFull]="workInProgressFull()"
       [tasksWorkingOnIt]="tasksWorkingOnIt()"
@@ -84,10 +169,7 @@
       (openAddWithStatus)="openAddFormWithStatus($event)"
       (startEdit)="startEdit($event)"
       (removeTask)="removeTask($event)"
-      (saveEdit)="saveEdit()"
-      (clearEditFields)="clearEditFields()"
-      (editTitleTextChange)="editTitleText.set($event)"
-      (editDescriptionTextChange)="editDescriptionText.set($event)"
+      (archiveTask)="archiveTask($event)"
     />
   </div>
 </div>
