@@ -54,11 +54,15 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
 
   @Output() titleChange = new EventEmitter<string>();
   @Output() descriptionChange = new EventEmitter<string>();
-  @Output() statusChange = new EventEmitter<TaskStatus>();
+  /** Not named `statusChange` — that pattern can interact badly with `[status]` on the host. */
+  @Output() taskStatusChange = new EventEmitter<TaskStatus>();
   @Output() submitForm = new EventEmitter<void>();
   @Output() clear = new EventEmitter<void>();
 
   @ViewChild('descEditor') private descEditor?: ElementRef<HTMLDivElement>;
+
+  /** Writable model for the status dropdown; `status` is one-way from parent, so ngModel must not bind to it alone. */
+  protected selectedStatus = TaskStatus.Todo;
 
   private descEditorFocused = false;
 
@@ -73,6 +77,9 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   }
 
   ngOnChanges(changes: SimpleChanges): void {
+    if (changes['status']) {
+      this.selectedStatus = this.status;
+    }
     if (changes['description']) {
       queueMicrotask(() => this.handleDescriptionInputChange());
     }
@@ -106,15 +113,18 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
     el?.focus();
   }
 
-  protected onStatusInput(event: Event): void {
-    const value = (event.target as HTMLSelectElement).value;
-    if (
-      value === TaskStatus.Todo ||
-      value === TaskStatus.Doing ||
-      value === TaskStatus.Done
-    ) {
-      this.statusChange.emit(value);
-    }
+  /** Native `change` + `HTMLSelectElement.value` — reliable string `todo` | `doing` | `done`. */
+  protected onStatusSelectChange(event: Event): void {
+    const raw = (event.target as HTMLSelectElement).value;
+    const status = this.parseTaskStatus(raw);
+    this.selectedStatus = status;
+    this.taskStatusChange.emit(status);
+  }
+
+  private parseTaskStatus(raw: string): TaskStatus {
+    if (raw === TaskStatus.Doing) return TaskStatus.Doing;
+    if (raw === TaskStatus.Done) return TaskStatus.Done;
+    return TaskStatus.Todo;
   }
 
   protected onSubmit(event: Event): void {

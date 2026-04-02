@@ -19,8 +19,8 @@
           <label class="text-neutral-300 text-sm">Status</label>
         }
         <select
-          [value]="status"
-          (change)="onStatusInput($event)"
+          [value]="selectedStatus"
+          (change)="onStatusSelectChange($event)"
           aria-label="Task status"
           class="w-full rounded-xl bg-neutral-800 text-white px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus-visible:outline-none"
         >

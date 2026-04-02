@@ -64,10 +64,10 @@ export class App implements OnInit {
   // ---------- Add / Edit Modal ----------
 
   protected openAddForm(): void {
+    this.formStatus.set(TaskStatus.Todo);
     this.formMode.set('add');
     this.formTitle.set('');
     this.formDescription.set('');
-    this.formStatus.set(TaskStatus.Todo);
     this.editingTaskId.set(null);
     this.showFormModal.set(true);
   }
