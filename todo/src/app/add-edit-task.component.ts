@@ -34,6 +34,8 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
 
   @Input() title = '';
   @Input() description = '';
+  /** Parent bumps on Clear so we re-apply model → view when signals skip unchanged values. */
+  @Input() formResetCounter = 0;
   @Input() status: TaskStatus = TaskStatus.Todo;
   @Input() showStatus = true;
   @Input() showLabels = true;
@@ -72,6 +74,13 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
       this.selectedStatus = this.status;
     }
     if (changes['description']) {
+      queueMicrotask(() => this.handleDescriptionInputChange());
+    }
+    if (
+      changes['formResetCounter'] &&
+      !changes['formResetCounter'].firstChange
+    ) {
+      this.selectedStatus = this.status;
       queueMicrotask(() => this.handleDescriptionInputChange());
     }
   }
@@ -127,10 +136,12 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   }
 
   protected onClearClick(): void {
+    this.descEditorFocused = false;
+    this.descEditor?.nativeElement?.blur();
     this.clear.emit();
   }
 
-  /** Apply parent `description` to the editor; always clear when parent sends empty (e.g. Clear). */
+  /** Apply parent `description` to the editor (e.g. Clear, open edit, or model sync). */
   private handleDescriptionInputChange(): void {
     const el = this.descEditor?.nativeElement;
     if (!el) return;
@@ -139,7 +150,6 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
       el.innerHTML = '';
       return;
     }
-    if (this.descEditorFocused) return;
     const current = this.serializeEditorHtml(el);
     if (current === incoming) return;
     this.applyValueToEditor(el, incoming);

@@ -29,6 +29,9 @@ export class App implements OnInit {
   protected formStatus = signal<TaskStatus>(TaskStatus.Todo);
   private editingTaskId = signal<number | null>(null);
 
+  /** Bumped on Clear / close so the form child re-syncs even when values are unchanged (e.g. edit + Clear). */
+  protected formResetCounter = signal(0);
+
   // Archive
   protected showArchive = signal(false);
   protected archivedTasks = signal<Task[]>([]);
@@ -98,21 +101,12 @@ export class App implements OnInit {
     this.resetFormFields();
   }
 
+  /** Clears the form (add and edit): empty title/description, status To be done. */
   protected resetFormFields(): void {
-    if (this.formMode() === 'add') {
-      this.formTitle.set('');
-      this.formDescription.set('');
-      this.formStatus.set(TaskStatus.Todo);
-    } else {
-      const task = this.tasks().find(
-        (t) => t.id === this.editingTaskId()
-      );
-      if (task) {
-        this.formTitle.set(task.title);
-        this.formDescription.set(task.description);
-        this.formStatus.set(task.status);
-      }
-    }
+    this.formTitle.set('');
+    this.formDescription.set('');
+    this.formStatus.set(TaskStatus.Todo);
+    this.formResetCounter.update((n) => n + 1);
   }
 
   protected submitForm(): void {
