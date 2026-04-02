@@ -6,6 +6,9 @@ import { Task, TaskStatus } from './task.model';
   selector: 'app-board',
   imports: [SafeHtmlPipe],
   templateUrl: './board.component.html',
+  host: {
+    class: 'flex min-h-0 flex-1 flex-col',
+  },
 })
 export class BoardComponent {
   protected readonly TaskStatus = TaskStatus;

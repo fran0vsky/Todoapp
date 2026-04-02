@@ -1,6 +1,6 @@
 @if (isLoading) {
   <div
-    class="rounded-xl bg-neutral-900/50 border border-neutral-800 px-4 py-8 flex items-center justify-center gap-3 text-neutral-300"
+    class="flex flex-1 min-h-0 items-center justify-center rounded-xl bg-neutral-900/50 border border-neutral-800 px-4 py-8 gap-3 text-neutral-300"
   >
     <span
       class="inline-block w-5 h-5 border-2 border-neutral-500 border-t-purple-200 rounded-full animate-spin"
@@ -8,9 +8,11 @@
     <span>Loading tasks...</span>
   </div>
 } @else {
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-    <section class="rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5">
-      <div class="flex items-center justify-between mb-4 gap-3">
+  <div class="flex flex-1 min-h-0 flex-col md:flex-row gap-8">
+    <section
+      class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5"
+    >
+      <div class="flex shrink-0 items-center justify-between mb-4 gap-3">
         <div class="flex items-center gap-2 min-w-0">
           <h2 class="text-purple-100 font-semibold">To be done</h2>
           <span
@@ -26,7 +28,10 @@
           + Add
         </button>
       </div>
-      <ul class="space-y-2">
+      <div
+        class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 -mr-0.5"
+      >
+        <ul class="space-y-2">
         @for (task of tasksToBeDone; track task.id) {
           <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
             <div class="min-w-0">
@@ -58,11 +63,14 @@
             No tasks here yet. Add one!
           </li>
         }
-      </ul>
+        </ul>
+      </div>
     </section>
 
-    <section class="rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5">
-      <div class="flex items-center justify-between mb-4 gap-3">
+    <section
+      class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5"
+    >
+      <div class="flex shrink-0 items-center justify-between mb-4 gap-3">
         <div class="flex items-center gap-2 min-w-0">
           <h2 class="text-purple-200 font-semibold">Work in progress</h2>
           <span
@@ -83,7 +91,10 @@
           + Add
         </button>
       </div>
-      <ul class="space-y-2">
+      <div
+        class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 -mr-0.5"
+      >
+        <ul class="space-y-2">
         @for (task of tasksWorkingOnIt; track task.id) {
           <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
             <div class="min-w-0">
@@ -115,11 +126,14 @@
             Nothing in progress right now.
           </li>
         }
-      </ul>
+        </ul>
+      </div>
     </section>
 
-    <section class="rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5">
-      <div class="flex items-center justify-between mb-4 gap-3">
+    <section
+      class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl bg-purple-900/15 border border-purple-500/20 p-5 min-w-0 shadow-sm shadow-purple-500/5"
+    >
+      <div class="flex shrink-0 items-center justify-between mb-4 gap-3">
         <div class="flex items-center gap-2 min-w-0">
           <h2 class="text-purple-200 font-semibold">Done</h2>
           <span
@@ -135,7 +149,10 @@
           + Add
         </button>
       </div>
-      <ul class="space-y-2">
+      <div
+        class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-y-contain pr-0.5 -mr-0.5"
+      >
+        <ul class="space-y-2">
         @for (task of tasksDone; track task.id) {
           <li class="rounded-xl bg-neutral-900/80 border border-purple-500/20 px-5 py-4 flex flex-col gap-3 min-w-0 w-full shadow-sm hover:shadow-md transition-shadow">
             <div class="min-w-0">
@@ -175,7 +192,8 @@
             No completed tasks yet.
           </li>
         }
-      </ul>
+        </ul>
+      </div>
     </section>
   </div>
 }
