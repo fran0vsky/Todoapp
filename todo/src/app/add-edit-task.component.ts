@@ -8,7 +8,6 @@ import {
   OnChanges,
   Output,
   SecurityContext,
-  signal,
   SimpleChanges,
   ViewChild,
 } from '@angular/core';
@@ -47,10 +46,8 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   @Input() disableSubmit = false;
   /** When true, "Work in progress" cannot be selected (WIP column is full). */
   @Input() disableDoingStatus = false;
-  /** Shown as native tooltip when Save is inactive (uses aria-disabled so hover works). */
+  /** Native `title` tooltip when Save is disabled (browser support varies on disabled controls). */
   @Input() saveDisabledHint = '';
-  /** Short headline for the validation banner (e.g. "Description required!"). */
-  @Input() saveBlockedAlertTitle = '';
 
   @Output() titleChange = new EventEmitter<string>();
   @Output() descriptionChange = new EventEmitter<string>();
@@ -65,12 +62,6 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   protected selectedStatus = TaskStatus.Todo;
 
   private descEditorFocused = false;
-
-  /** Shown after user tries to save while invalid. */
-  protected readonly submitBlockedBanner = signal<{
-    headline: string;
-    detail: string | null;
-  } | null>(null);
 
   ngAfterViewInit(): void {
     queueMicrotask(() => this.handleDescriptionInputChange());
@@ -130,25 +121,13 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   protected onSubmit(event: Event): void {
     event.preventDefault();
     if (this.disableSubmit) {
-      this.showSubmitBlockedBanner();
       return;
     }
-    this.submitBlockedBanner.set(null);
     this.submitForm.emit();
   }
 
   protected onClearClick(): void {
-    this.submitBlockedBanner.set(null);
     this.clear.emit();
-  }
-
-  private showSubmitBlockedBanner(): void {
-    const headline =
-      this.saveBlockedAlertTitle.trim() || "Can't save yet";
-    const detailRaw = (this.saveDisabledHint || '').trim();
-    const detail =
-      detailRaw.length > 0 && detailRaw !== headline ? detailRaw : null;
-    this.submitBlockedBanner.set({ headline, detail });
   }
 
   /** Apply parent `description` to the editor; always clear when parent sends empty (e.g. Clear). */

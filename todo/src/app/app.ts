@@ -268,19 +268,6 @@ export class App implements OnInit {
     return '';
   }
 
-  protected formSaveBlockedTitle(): string {
-    if (!this.formTitle().trim()) {
-      return 'Title required!';
-    }
-    if (!hasTaskDescription(this.formDescription())) {
-      return 'Description required!';
-    }
-    if (this.formStatus() === TaskStatus.Doing && this.workInProgressFull()) {
-      return 'Work in progress is full';
-    }
-    return '';
-  }
-
   /** In edit mode, disable Doing option only if WIP is full AND the task wasn't already Doing. */
   protected disableDoingInForm = computed(() => {
     if (!this.workInProgressFull()) return false;
