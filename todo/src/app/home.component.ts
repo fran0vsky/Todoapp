@@ -20,8 +20,6 @@ export class HomeComponent implements OnInit {
   }
 
   protected logout(): void {
-    this.authService.signOut().subscribe(() => {
-      this.taskState.loadTasks();
-    });
+    this.authService.signOutAndRedirect();
   }
 }

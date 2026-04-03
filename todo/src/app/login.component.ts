@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from './auth.service';
@@ -9,13 +9,20 @@ import { AuthService } from './auth.service';
   imports: [FormsModule, RouterModule],
   templateUrl: './login.component.html',
 })
-export class LoginComponent {
+export class LoginComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly router = inject(Router);
 
   email = '';
   password = '';
   errorMessage = signal<string | null>(null);
+
+  ngOnInit(): void {
+    // Redirect to home if already logged in
+    if (this.authService.currentUser()) {
+      this.router.navigate(['/']);
+    }
+  }
 
   onSubmit(): void {
     this.errorMessage.set(null);

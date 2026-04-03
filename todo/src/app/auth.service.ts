@@ -1,27 +1,126 @@
-import { Injectable, signal } from '@angular/core';
-import { from, Observable } from 'rxjs';
-import { AuthResponse, User } from '@supabase/supabase-js';
+import { Injectable, signal, NgZone, inject, OnDestroy } from '@angular/core';
+import { from, Observable, Subject, timer, Subscription } from 'rxjs';
+import { AuthResponse, User, Session } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { tap } from 'rxjs/operators';
+import { Router } from '@angular/router';
 
 @Injectable({ providedIn: 'root' })
-export class AuthService {
+export class AuthService implements OnDestroy {
   readonly currentUser = signal<User | null>(null);
+  private readonly ngZone = inject(NgZone);
+  private readonly router = inject(Router);
+
+  private sessionTimerSubscription: Subscription | null = null;
+  private readonly SESSION_TIMEOUT_SECONDS = 3600; // FOR TESTING: 10 seconds. Set to 3600 for 1 hour.
 
   constructor() {
-    supabase.auth.onAuthStateChange((_event, session) => {
-      this.currentUser.set(session?.user ?? null);
+    supabase.auth.onAuthStateChange((event, session) => {
+      this.ngZone.run(() => {
+        this.currentUser.set(session?.user ?? null);
+        if (session) {
+          console.log('[AuthService] Auth state changed: session received.', event, session);
+          this.startSessionTimer(session);
+        } else {
+          console.log('[AuthService] Auth state changed: no session or logged out.', event);
+          this.stopSessionTimer();
+        }
+      });
+    });
+
+    // Check current session on service init (e.g., page refresh)
+    from(supabase.auth.getSession()).subscribe(({ data: { session } }) => {
+      this.ngZone.run(() => {
+        this.currentUser.set(session?.user ?? null);
+        if (session) {
+          console.log('[AuthService] Initial session check: session found.', session);
+          this.startSessionTimer(session);
+        } else {
+          console.log('[AuthService] Initial session check: no session.');
+        }
+      });
     });
   }
 
+  ngOnDestroy(): void {
+    this.stopSessionTimer();
+  }
+
+  private startSessionTimer(session: Session): void {
+    this.stopSessionTimer(); // Always stop existing timer before starting a new one
+
+    const timeoutSeconds = this.SESSION_TIMEOUT_SECONDS;
+    const timeoutMs = timeoutSeconds * 1000;
+
+    const supabaseExpiresAt = session.expires_at ? new Date(session.expires_at * 1000).toLocaleString() : 'N/A';
+    const now = new Date().toLocaleString();
+
+    console.log(`[AuthService] Starting session timer for ${timeoutSeconds} seconds.`);
+    console.log(`[AuthService] Current time: ${now}`);
+    console.log(`[AuthService] Supabase session (JWT) expires at: ${supabaseExpiresAt} (in ${session.expires_in} seconds).`);
+    console.log(`[AuthService] User: ${session.user?.email}`);
+
+    this.sessionTimerSubscription = timer(timeoutMs)
+      .pipe(
+        tap(() => {
+          console.log('[AuthService] --- Client-side timer triggered. Initiating logout. ---');
+          this.ngZone.run(() => this.signOutAndRedirect());
+        })
+      )
+      .subscribe(() => {
+        console.log('[AuthService] Timer subscription completed.');
+      });
+
+    console.log('[AuthService] Timer subscription started.');
+  }
+
+  private stopSessionTimer(): void {
+    if (this.sessionTimerSubscription && !this.sessionTimerSubscription.closed) {
+      this.sessionTimerSubscription.unsubscribe();
+      this.sessionTimerSubscription = null;
+      console.log('[AuthService] Session timer stopped via unsubscribe.');
+    } else {
+      console.log('[AuthService] No active session timer to stop.');
+    }
+  }
+
   signUp(email: string, password: string): Observable<AuthResponse> {
-    return from(supabase.auth.signUp({ email, password }));
+    return from(supabase.auth.signUp({ email, password })).pipe(
+      tap(response => {
+        if (response.data.session) {
+          console.log('[AuthService] Sign up successful. Starting timer.');
+          this.ngZone.run(() => this.startSessionTimer(response.data.session!));
+        }
+      })
+    );
   }
 
   signIn(email: string, password: string): Observable<AuthResponse> {
-    return from(supabase.auth.signInWithPassword({ email, password }));
+    return from(supabase.auth.signInWithPassword({ email, password })).pipe(
+      tap(response => {
+        if (response.data.session) {
+          console.log('[AuthService] Sign in successful. Starting timer.');
+          this.ngZone.run(() => this.startSessionTimer(response.data.session!));
+        }
+      })
+    );
   }
 
   signOut(): Observable<{ error: Error | null }> {
     return from(supabase.auth.signOut());
+  }
+
+  signOutAndRedirect(): void {
+    console.log('[AuthService] signOutAndRedirect: Attempting to sign out and navigate.');
+    this.signOut().subscribe({
+      next: () => {
+        console.log('[AuthService] signOutAndRedirect: Sign out successful. Navigating to /login.');
+        this.router.navigate(['/login']);
+      },
+      error: (err) => {
+        console.error('[AuthService] signOutAndRedirect: Error during sign out:', err);
+        this.router.navigate(['/login']); // Still attempt to navigate to unblock
+      }
+    });
   }
 }

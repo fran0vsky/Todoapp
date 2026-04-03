@@ -29,9 +29,14 @@
       </div>
       <button
         type="submit"
+        [disabled]="isLoading()"
         class="w-full rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm transition-colors"
       >
-        Register
+        @if (isLoading()) {
+          <span class="inline-block w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin"></span>
+        } @else {
+          Register
+        }
       </button>
 
       @if (errorMessage()) {
