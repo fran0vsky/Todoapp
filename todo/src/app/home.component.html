@@ -4,6 +4,29 @@
       <h1 class="text-3xl font-semibold text-white leading-tight">Simple Worflow Menager</h1>
 
       <div class="flex items-center gap-3 shrink-0">
+        @if (!authService.currentUser()) {
+          <a
+            routerLink="/login"
+            class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow"
+          >
+            Login
+          </a>
+          <a
+            routerLink="/register"
+            class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow"
+          >
+            Register
+          </a>
+        } @else {
+          <span class="text-neutral-400">Hello, {{ authService.currentUser()!.email }}</span>
+          <button
+            type="button"
+            (click)="logout()"
+            class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow"
+          >
+            Logout
+          </button>
+        }
         <button
           type="button"
           (click)="taskState.openArchive()"
@@ -21,7 +44,7 @@
       </div>
     </div>
 
-        @if (taskState.showFormModal()) {
+    @if (taskState.showFormModal()) {
       <app-task-form-modal />
     }
 
@@ -75,14 +98,10 @@
                     class="rounded-xl bg-neutral-800/70 border border-neutral-700 px-5 py-4 flex items-start gap-4"
                   >
                     <div class="flex-1 min-w-0">
-                      <div
-                        class="text-neutral-200 font-medium break-words"
-                      >
+                      <div class="text-neutral-200 font-medium break-words">
                         {{ task.title }}
                       </div>
-                      <div
-                        class="text-neutral-400 text-sm break-words mt-1"
-                      >
+                      <div class="text-neutral-400 text-sm break-words mt-1">
                         {{ task.description }}
                       </div>
                       <span

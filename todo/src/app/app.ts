@@ -1,18 +1,9 @@
-import { Component, inject, OnInit } from '@angular/core';
-import { TaskFormModalComponent } from './task-form-modal.component';
-import { TaskBoardSmartComponent } from './task-board-smart.component';
-import { TaskStateService } from './task-state.service';
-import { TaskStatus } from './task.model';
+import { Component } from '@angular/core';
+import { RouterModule } from '@angular/router';
 
 @Component({
-  imports: [TaskBoardSmartComponent, TaskFormModalComponent],
+  imports: [RouterModule],
   selector: 'app-root',
-  templateUrl: './app.html',
+  template: '<router-outlet />',
 })
-export class App implements OnInit {
-  protected readonly taskState = inject(TaskStateService);
-
-  ngOnInit(): void {
-    this.taskState.loadTasks();
-  }
-}
+export class App {}
