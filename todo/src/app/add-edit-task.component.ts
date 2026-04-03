@@ -59,6 +59,7 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   @Output() clear = new EventEmitter<void>();
 
   @ViewChild('descEditor') private descEditor?: ElementRef<HTMLDivElement>;
+  @ViewChild('statusSelect') private statusSelect?: ElementRef<HTMLSelectElement>;
 
   /** Writable model for the status dropdown; `status` is one-way from parent, so ngModel must not bind to it alone. */
   protected selectedStatus = TaskStatus.Todo;
@@ -66,7 +67,11 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   private descEditorFocused = false;
 
   ngAfterViewInit(): void {
-    queueMicrotask(() => this.handleDescriptionInputChange());
+    queueMicrotask(() => {
+      this.selectedStatus = this.status;
+      this.syncStatusSelectDom();
+      this.handleDescriptionInputChange();
+    });
   }
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -82,6 +87,19 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
     ) {
       this.selectedStatus = this.status;
       queueMicrotask(() => this.handleDescriptionInputChange());
+    }
+    if (changes['status'] || (changes['formResetCounter'] && !changes['formResetCounter'].firstChange)) {
+      queueMicrotask(() => this.syncStatusSelectDom());
+    }
+  }
+
+  /** Native <select> value must match option value="" exactly; set element.value after model updates. */
+  private syncStatusSelectDom(): void {
+    const el = this.statusSelect?.nativeElement;
+    if (!el) return;
+    const v = this.selectedStatus;
+    if (el.value !== v) {
+      el.value = v;
     }
   }
 

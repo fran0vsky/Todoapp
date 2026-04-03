@@ -19,16 +19,17 @@
           <label class="text-neutral-300 text-sm">Status</label>
         }
         <select
-          [value]="selectedStatus"
+          #statusSelect
           (change)="onStatusSelectChange($event)"
           aria-label="Task status"
           class="w-full rounded-xl bg-neutral-800 text-white px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus-visible:outline-none"
         >
-          <option [value]="TaskStatus.Todo">To be done</option>
-          <option [value]="TaskStatus.Doing" [disabled]="disableDoingStatus">
+          <!-- Static value="" so DOM matches TaskStatus ('todo' | 'doing' | 'done'); [value] on options + [value] on select often shows blank in Angular. -->
+          <option value="todo">To be done</option>
+          <option value="doing" [disabled]="disableDoingStatus">
             Work in progress
           </option>
-          <option [value]="TaskStatus.Done">Done</option>
+          <option value="done">Done</option>
         </select>
       </div>
     }

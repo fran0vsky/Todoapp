@@ -73,18 +73,20 @@ export class App implements OnInit {
     this.formDescription.set('');
     this.editingTaskId.set(null);
     this.showFormModal.set(true);
+    this.formResetCounter.update((n) => n + 1);
   }
 
   protected openAddFormWithStatus(status: TaskStatus): void {
     if (status === TaskStatus.Doing && this.workInProgressFull()) {
       return;
     }
+    this.formStatus.set(status);
     this.formMode.set('add');
     this.formTitle.set('');
     this.formDescription.set('');
-    this.formStatus.set(status);
     this.editingTaskId.set(null);
     this.showFormModal.set(true);
+    this.formResetCounter.update((n) => n + 1);
   }
 
   protected startEdit(task: Task): void {
@@ -94,6 +96,7 @@ export class App implements OnInit {
     this.formStatus.set(task.status);
     this.editingTaskId.set(task.id);
     this.showFormModal.set(true);
+    this.formResetCounter.update((n) => n + 1);
   }
 
   protected closeFormModal(): void {
