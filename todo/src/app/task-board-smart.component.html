@@ -1,0 +1,11 @@
+<app-task-board-presentational
+  [isLoading]="taskState.isLoading()"
+  [tasksToBeDone]="taskState.tasksToBeDone()"
+  [workInProgressFull]="taskState.workInProgressFull()"
+  [tasksWorkingOnIt]="taskState.tasksWorkingOnIt()"
+  [tasksDone]="taskState.tasksDone()"
+  (openAddWithStatus)="taskState.openAddFormWithStatus($event)"
+  (startEdit)="taskState.startEdit($event)"
+  (removeTask)="taskState.removeTask($event)"
+  (archiveTask)="taskState.archiveTask($event)"
+/>
