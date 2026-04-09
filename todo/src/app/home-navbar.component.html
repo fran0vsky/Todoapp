@@ -1,0 +1,42 @@
+<nav
+  class="flex flex-wrap items-center justify-between gap-2 min-h-0"
+  aria-label="Main"
+>
+  <a
+    routerLink="/"
+    class="text-sm md:text-base font-semibold text-white leading-none hover:text-purple-200/90 focus:outline-none focus:ring-2 focus:ring-purple-400/40 rounded-sm py-0.5"
+  >
+    Simple Worflow Menager
+  </a>
+
+  <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+    @if (!authService.currentUser()) {
+      <a
+        routerLink="/login"
+        class="rounded-lg bg-purple-500 text-white px-2.5 py-1 md:px-3 md:py-1.5 text-xs font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-sm transition-shadow leading-none"
+      >
+        Login
+      </a>
+      <a
+        routerLink="/register"
+        class="rounded-lg bg-purple-500 text-white px-2.5 py-1 md:px-3 md:py-1.5 text-xs font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-sm transition-shadow leading-none"
+      >
+        Register
+      </a>
+    } @else {
+      <span
+        class="text-neutral-400 text-xs max-w-[min(100%,12rem)] truncate leading-tight"
+        [attr.title]="authService.currentUser()!.email"
+      >
+        Hello, {{ authService.currentUser()!.email }}
+      </span>
+      <button
+        type="button"
+        (click)="logout()"
+        class="rounded-lg bg-purple-500 text-white px-2.5 py-1 md:px-3 md:py-1.5 text-xs font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-sm transition-shadow leading-none"
+      >
+        Logout
+      </button>
+    }
+  </div>
+</nav>

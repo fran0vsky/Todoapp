@@ -1,14 +1,13 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { RouterModule } from '@angular/router';
 import { TaskFormModalComponent } from './task-form-modal.component';
 import { TaskBoardSmartComponent } from './task-board-smart.component';
 import { TaskStateService } from './task-state.service';
-import { AuthService } from './auth.service';
+import { HomeNavbarComponent } from './home-navbar.component';
 
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [RouterModule, TaskBoardSmartComponent, TaskFormModalComponent],
+  imports: [HomeNavbarComponent, TaskBoardSmartComponent, TaskFormModalComponent],
   templateUrl: './home.component.html',
   host: {
     class: 'flex flex-col flex-1 min-h-0',
@@ -16,7 +15,6 @@ import { AuthService } from './auth.service';
 })
 export class HomeComponent implements OnInit {
   protected readonly taskState = inject(TaskStateService);
-  protected readonly authService = inject(AuthService);
 
   /** Right-side archive panel: collapsed shows a narrow rail; expanded shows the list. */
   protected readonly archivePanelExpanded = signal(false);
@@ -39,9 +37,5 @@ export class HomeComponent implements OnInit {
 
   ngOnInit(): void {
     this.taskState.loadTasks();
-  }
-
-  protected logout(): void {
-    this.authService.signOutAndRedirect();
   }
 }
