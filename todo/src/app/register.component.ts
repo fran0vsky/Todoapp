@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from './auth.service';
+import { isValidEmailFormat } from './email-validation.util';
 import { finalize } from 'rxjs/operators';
 
 @Component({
@@ -16,6 +17,8 @@ export class RegisterComponent implements OnInit {
 
   email = '';
   password = '';
+  /** True after the user has typed in the email field (validation UI only). */
+  protected readonly emailDirty = signal(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
   isLoading = signal(false);
@@ -27,7 +30,22 @@ export class RegisterComponent implements OnInit {
     }
   }
 
+  protected onEmailInput(): void {
+    this.emailDirty.set(true);
+  }
+
+  protected showEmailInvalid(): boolean {
+    return this.emailDirty() && !isValidEmailFormat(this.email);
+  }
+
+  protected registerDisabled(): boolean {
+    return this.isLoading() || !isValidEmailFormat(this.email) || !this.password.trim();
+  }
+
   onSubmit(): void {
+    if (!isValidEmailFormat(this.email) || !this.password.trim()) {
+      return;
+    }
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.isLoading.set(true);

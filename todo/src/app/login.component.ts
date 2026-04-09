@@ -2,6 +2,7 @@ import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from './auth.service';
+import { isValidEmailFormat } from './email-validation.util';
 
 @Component({
   selector: 'app-login',
@@ -15,7 +16,21 @@ export class LoginComponent implements OnInit {
 
   email = '';
   password = '';
+  /** True after the user has typed in the email field (validation UI only). */
+  protected readonly emailDirty = signal(false);
   errorMessage = signal<string | null>(null);
+
+  protected onEmailInput(): void {
+    this.emailDirty.set(true);
+  }
+
+  protected showEmailInvalid(): boolean {
+    return this.emailDirty() && !isValidEmailFormat(this.email);
+  }
+
+  protected loginDisabled(): boolean {
+    return !isValidEmailFormat(this.email) || !this.password.trim();
+  }
 
   ngOnInit(): void {
     // Redirect to home if already logged in
@@ -25,6 +40,9 @@ export class LoginComponent implements OnInit {
   }
 
   onSubmit(): void {
+    if (!isValidEmailFormat(this.email) || !this.password.trim()) {
+      return;
+    }
     this.errorMessage.set(null);
 
     this.authService.signIn(this.email, this.password).subscribe({

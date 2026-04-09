@@ -10,8 +10,11 @@
           id="email"
           name="email"
           [(ngModel)]="email"
-          required
-          class="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+          (input)="onEmailInput()"
+          autocomplete="email"
+          class="w-full rounded-lg bg-neutral-800 border px-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
+          [class.border-red-500]="showEmailInvalid()"
+          [class.border-neutral-700]="!showEmailInvalid()"
           placeholder="you@example.com"
         />
       </div>
@@ -22,14 +25,15 @@
           id="password"
           name="password"
           [(ngModel)]="password"
-          required
+          autocomplete="current-password"
           class="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
           placeholder="Your password"
         />
       </div>
       <button
         type="submit"
-        class="w-full rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm transition-colors"
+        [disabled]="loginDisabled()"
+        class="w-full rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm transition-colors disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-neutral-600 disabled:text-neutral-300 disabled:hover:bg-neutral-600"
       >
         Login
       </button>
