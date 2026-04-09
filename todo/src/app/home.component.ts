@@ -10,6 +10,9 @@ import { AuthService } from './auth.service';
   standalone: true,
   imports: [RouterModule, TaskBoardSmartComponent, TaskFormModalComponent],
   templateUrl: './home.component.html',
+  host: {
+    class: 'flex flex-col flex-1 min-h-0',
+  },
 })
 export class HomeComponent implements OnInit {
   protected readonly taskState = inject(TaskStateService);
