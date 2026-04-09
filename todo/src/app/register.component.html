@@ -25,10 +25,103 @@
           id="password"
           name="password"
           [(ngModel)]="password"
+          (ngModelChange)="onPasswordInput()"
           autocomplete="new-password"
           class="w-full rounded-lg bg-neutral-800 border border-neutral-700 px-4 py-3 text-white placeholder-neutral-500 focus:outline-none focus:ring-2 focus:ring-purple-400 focus:border-transparent"
-          placeholder="Min. 6 characters"
+          placeholder="Create a strong password"
+          aria-describedby="password-requirements"
         />
+        <ul
+          id="password-requirements"
+          class="mt-3 space-y-1.5 text-sm"
+          aria-label="Password requirements"
+        >
+          <li
+            class="flex items-start gap-2"
+            [class.text-neutral-500]="!passwordDirty()"
+            [class.text-red-400]="passwordDirty() && !minLengthMet()"
+            [class.text-green-400]="passwordDirty() && minLengthMet()"
+          >
+            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+              @if (!passwordDirty()) {
+                ○
+              } @else if (minLengthMet()) {
+                ✓
+              } @else {
+                ×
+              }
+            </span>
+            <span>At least 6 characters</span>
+          </li>
+          <li
+            class="flex items-start gap-2"
+            [class.text-neutral-500]="!passwordDirty()"
+            [class.text-red-400]="passwordDirty() && !uppercaseMet()"
+            [class.text-green-400]="passwordDirty() && uppercaseMet()"
+          >
+            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+              @if (!passwordDirty()) {
+                ○
+              } @else if (uppercaseMet()) {
+                ✓
+              } @else {
+                ×
+              }
+            </span>
+            <span>At least one uppercase letter</span>
+          </li>
+          <li
+            class="flex items-start gap-2"
+            [class.text-neutral-500]="!passwordDirty()"
+            [class.text-red-400]="passwordDirty() && !lowercaseMet()"
+            [class.text-green-400]="passwordDirty() && lowercaseMet()"
+          >
+            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+              @if (!passwordDirty()) {
+                ○
+              } @else if (lowercaseMet()) {
+                ✓
+              } @else {
+                ×
+              }
+            </span>
+            <span>At least one lowercase letter</span>
+          </li>
+          <li
+            class="flex items-start gap-2"
+            [class.text-neutral-500]="!passwordDirty()"
+            [class.text-red-400]="passwordDirty() && !digitMet()"
+            [class.text-green-400]="passwordDirty() && digitMet()"
+          >
+            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+              @if (!passwordDirty()) {
+                ○
+              } @else if (digitMet()) {
+                ✓
+              } @else {
+                ×
+              }
+            </span>
+            <span>At least one digit</span>
+          </li>
+          <li
+            class="flex items-start gap-2"
+            [class.text-neutral-500]="!passwordDirty()"
+            [class.text-red-400]="passwordDirty() && !specialMet()"
+            [class.text-green-400]="passwordDirty() && specialMet()"
+          >
+            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+              @if (!passwordDirty()) {
+                ○
+              } @else if (specialMet()) {
+                ✓
+              } @else {
+                ×
+              }
+            </span>
+            <span>At least one special character (symbol or punctuation)</span>
+          </li>
+        </ul>
       </div>
       <button
         type="submit"

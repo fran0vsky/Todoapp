@@ -3,6 +3,14 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import { AuthService } from './auth.service';
 import { isValidEmailFormat } from './email-validation.util';
+import {
+  hasDigit,
+  hasLowercaseLetter,
+  hasPasswordMinLength,
+  hasSpecialCharacter,
+  hasUppercaseLetter,
+  isPasswordValidForRegistration,
+} from './password-validation.util';
 import { finalize } from 'rxjs/operators';
 
 @Component({
@@ -19,6 +27,8 @@ export class RegisterComponent implements OnInit {
   password = '';
   /** True after the user has typed in the email field (validation UI only). */
   protected readonly emailDirty = signal(false);
+  /** True after the user has typed in the password field (checklist colors). */
+  protected readonly passwordDirty = signal(false);
   errorMessage = signal<string | null>(null);
   successMessage = signal<string | null>(null);
   isLoading = signal(false);
@@ -38,12 +48,40 @@ export class RegisterComponent implements OnInit {
     return this.emailDirty() && !isValidEmailFormat(this.email);
   }
 
+  protected onPasswordInput(): void {
+    this.passwordDirty.set(true);
+  }
+
   protected registerDisabled(): boolean {
-    return this.isLoading() || !isValidEmailFormat(this.email) || !this.password.trim();
+    return (
+      this.isLoading() ||
+      !isValidEmailFormat(this.email) ||
+      !isPasswordValidForRegistration(this.password)
+    );
+  }
+
+  protected minLengthMet(): boolean {
+    return hasPasswordMinLength(this.password);
+  }
+
+  protected uppercaseMet(): boolean {
+    return hasUppercaseLetter(this.password);
+  }
+
+  protected lowercaseMet(): boolean {
+    return hasLowercaseLetter(this.password);
+  }
+
+  protected digitMet(): boolean {
+    return hasDigit(this.password);
+  }
+
+  protected specialMet(): boolean {
+    return hasSpecialCharacter(this.password);
   }
 
   onSubmit(): void {
-    if (!isValidEmailFormat(this.email) || !this.password.trim()) {
+    if (!isValidEmailFormat(this.email) || !isPasswordValidForRegistration(this.password)) {
       return;
     }
     this.errorMessage.set(null);
