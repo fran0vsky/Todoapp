@@ -6,14 +6,34 @@
       class="flex flex-1 min-h-0 flex-col lg:flex-row gap-4 lg:gap-0 lg:items-stretch"
     >
       <div class="flex flex-col flex-1 min-h-0 min-w-0 lg:pr-6">
-        <div class="flex shrink-0 items-center justify-start gap-4 mb-6">
+        <div
+          class="flex shrink-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between mb-6"
+        >
           <button
             type="button"
             (click)="taskState.openAddForm()"
-            class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow"
+            class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow self-start"
           >
             Add
           </button>
+          <div class="flex flex-col gap-2 min-w-0 sm:max-w-md sm:flex-1 sm:justify-end sm:items-end">
+            <label for="assignee-filter" class="text-neutral-400 text-xs font-medium uppercase tracking-wide"
+              >Filter by assignee</label
+            >
+            <select
+              id="assignee-filter"
+              [value]="taskState.assigneeFilter()"
+              (change)="taskState.setAssigneeFilterFromSelect($any($event.target).value)"
+              class="w-full sm:w-auto min-w-[min(100%,14rem)] rounded-lg bg-neutral-900 border border-neutral-700 text-neutral-100 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/40 hover:border-neutral-600"
+              aria-label="Filter tasks by assignee"
+            >
+              <option value="all">All assignees</option>
+              <option value="unassigned">Unassigned</option>
+              @for (email of taskState.assigneeFilterOptions(); track email) {
+                <option [value]="email">{{ email }}</option>
+              }
+            </select>
+          </div>
         </div>
 
         @if (taskState.showFormModal()) {

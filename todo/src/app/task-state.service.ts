@@ -37,12 +37,17 @@ const initialState: TaskState = {
   taskForAssign: null,
 };
 
+export type AssigneeFilter = 'all' | 'unassigned' | string;
+
 @Injectable({ providedIn: 'root' })
 export class TaskStateService {
   private readonly api = inject(TaskApiService);
 
   // State as a signal
   private readonly state = signal(initialState);
+
+  /** Global board filter: all tasks, only unassigned, or a specific assignee email. */
+  private readonly assigneeFilterSig = signal<AssigneeFilter>('all');
 
   // Public selectors
   readonly tasks = computed(() => this.state().tasks);
@@ -53,6 +58,31 @@ export class TaskStateService {
   readonly showArchive = computed(() => this.state().showArchive);
   readonly showAssignModal = computed(() => this.state().showAssignModal);
   readonly taskForAssign = computed(() => this.state().taskForAssign);
+
+  readonly assigneeFilter = this.assigneeFilterSig.asReadonly();
+
+  /** Distinct assignee emails on the board (for filter dropdown), sorted. */
+  readonly assigneeFilterOptions = computed(() => {
+    const emails = new Set<string>();
+    for (const t of this.state().tasks) {
+      const e = t.assignee_email?.trim();
+      if (e) emails.add(e);
+    }
+    const current = this.assigneeFilterSig();
+    if (typeof current === 'string' && current !== 'all' && current !== 'unassigned') {
+      emails.add(current);
+    }
+    return [...emails].sort((a, b) => a.localeCompare(b));
+  });
+
+  /** Tasks visible on the board after applying the assignee filter. */
+  private readonly visibleTasks = computed(() => {
+    const tasks = this.state().tasks;
+    const f = this.assigneeFilterSig();
+    if (f === 'all') return tasks;
+    if (f === 'unassigned') return tasks.filter((t) => !t.assignee_email?.trim());
+    return tasks.filter((t) => t.assignee_email?.trim() === f);
+  });
 
   // Form state selectors
   readonly formMode = computed(() => this.state().formMode);
@@ -74,13 +104,13 @@ export class TaskStateService {
   );
 
   readonly tasksToBeDone = computed(() =>
-    this.state().tasks.filter((t) => t.status === TaskStatus.Todo)
+    this.visibleTasks().filter((t) => t.status === TaskStatus.Todo)
   );
   readonly tasksWorkingOnIt = computed(() =>
-    this.state().tasks.filter((t) => t.status === TaskStatus.Doing)
+    this.visibleTasks().filter((t) => t.status === TaskStatus.Doing)
   );
   readonly tasksDone = computed(() =>
-    this.state().tasks.filter((t) => t.status === TaskStatus.Done)
+    this.visibleTasks().filter((t) => t.status === TaskStatus.Done)
   );
 
   readonly formSubmitDisabled = computed(() => {
@@ -120,6 +150,10 @@ export class TaskStateService {
   });
 
   // Actions
+
+  setAssigneeFilterFromSelect(raw: string): void {
+    this.assigneeFilterSig.set(raw as AssigneeFilter);
+  }
 
   loadTasks(): void {
     this.state.update((s) => ({ ...s, isLoading: true }));
