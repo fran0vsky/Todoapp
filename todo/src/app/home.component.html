@@ -155,9 +155,10 @@
                             </div>
                           }
                         </div>
-                        <div class="text-neutral-400 text-xs break-words mt-1.5 line-clamp-3 leading-relaxed">
-                          {{ task.description }}
-                        </div>
+                        <div
+                          class="text-neutral-400 text-xs break-words mt-1.5 line-clamp-3 leading-relaxed [&_a]:text-purple-300 [&_a]:underline"
+                          [innerHTML]="task.description | safeHtml"
+                        ></div>
                         <span
                           class="inline-block mt-2 rounded-md bg-neutral-700/60 text-neutral-400 text-xs px-2 py-0.5"
                         >

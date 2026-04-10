@@ -7,6 +7,7 @@ import { TaskBoardSmartComponent } from './task-board-smart.component';
 import { TaskStateService } from './task-state.service';
 import { HomeNavbarComponent } from './home-navbar.component';
 import { ProjectApiService } from './project-api.service';
+import { SafeHtmlPipe } from './safe-html.pipe';
 
 @Component({
   selector: 'app-home',
@@ -17,6 +18,7 @@ import { ProjectApiService } from './project-api.service';
     TaskBoardSmartComponent,
     TaskFormModalComponent,
     AssignTaskModalComponent,
+    SafeHtmlPipe,
   ],
   templateUrl: './home.component.html',
   host: {
