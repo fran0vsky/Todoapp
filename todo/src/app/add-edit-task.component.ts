@@ -12,7 +12,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
-import { TaskStatus } from './task.model';
+import { FIBONACCI_ESTIMATES, TaskStatus } from './task.model';
 
 @Component({
   selector: 'app-add-edit-task',
@@ -31,13 +31,17 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   private readonly sanitizer = inject(DomSanitizer);
 
   protected readonly TaskStatus = TaskStatus;
+  protected readonly fibonacciEstimates = FIBONACCI_ESTIMATES;
 
   @Input() title = '';
   @Input() description = '';
   /** Parent bumps on Clear so we re-apply model → view when signals skip unchanged values. */
   @Input() formResetCounter = 0;
   @Input() status: TaskStatus = TaskStatus.Todo;
+  /** Story points (Fibonacci); null = not set. */
+  @Input() estimate: number | null = null;
   @Input() showStatus = true;
+  @Input() showEstimate = true;
   @Input() showLabels = true;
   @Input() submitLabel = 'Save';
   @Input() clearLabel = 'Clear';
@@ -55,6 +59,7 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   @Output() descriptionChange = new EventEmitter<string>();
   /** Not named `statusChange` — that pattern can interact badly with `[status]` on the host. */
   @Output() taskStatusChange = new EventEmitter<TaskStatus>();
+  @Output() estimateChange = new EventEmitter<number | null>();
   @Output() submitForm = new EventEmitter<void>();
   @Output() clear = new EventEmitter<void>();
 
@@ -143,6 +148,15 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit {
     if (raw === TaskStatus.Doing) return TaskStatus.Doing;
     if (raw === TaskStatus.Done) return TaskStatus.Done;
     return TaskStatus.Todo;
+  }
+
+  protected onEstimateChange(event: Event): void {
+    const raw = (event.target as HTMLSelectElement).value;
+    if (raw === '') {
+      this.estimateChange.emit(null);
+      return;
+    }
+    this.estimateChange.emit(Number(raw));
   }
 
   protected onSubmit(event: Event): void {

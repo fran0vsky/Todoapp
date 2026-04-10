@@ -8,6 +8,7 @@ type CreateTaskBody = {
   description?: unknown;
   status?: unknown;
   assignee_email?: unknown;
+  estimate?: unknown;
 };
 
 type UpdateTaskBody = {
@@ -15,6 +16,27 @@ type UpdateTaskBody = {
   description?: unknown;
   status?: unknown;
   assignee_email?: unknown;
+  estimate?: unknown;
+};
+
+const FIB_ESTIMATES = new Set<number>([1, 2, 3, 5, 8]);
+
+const parseEstimate = (
+  value: unknown
+): { ok: true; value: number | null } | { ok: false; error: string } => {
+  if (value === undefined) {
+    return { ok: true, value: null };
+  }
+  if (value === null) {
+    return { ok: true, value: null };
+  }
+  if (typeof value !== 'number' || !Number.isInteger(value)) {
+    return { ok: false, error: 'estimate must be an integer, null, or omitted' };
+  }
+  if (!FIB_ESTIMATES.has(value)) {
+    return { ok: false, error: 'estimate must be one of 1, 2, 3, 5, 8' };
+  }
+  return { ok: true, value };
 };
 
 const isSimpleEmail = (value: string): boolean =>
@@ -63,7 +85,7 @@ app.get('/api/users', async (_req, res) => {
 app.get('/api/tasks', async (_req, res) => {
   const { data, error } = await supabase
     .from('tasks')
-    .select('id, title, description, status, assignee_email')
+    .select('id, title, description, status, assignee_email, estimate')
     .eq('archived', false)
     .order('created_at', { ascending: true });
 
@@ -107,15 +129,24 @@ app.post('/api/tasks', async (req, res) => {
     return;
   }
 
+  const est = parseEstimate(body.estimate);
+  if (est.ok === false) {
+    res.status(400).json({ error: est.error });
+    return;
+  }
+
   const insertRow: Record<string, unknown> = { title, description, status };
   if (assigneeEmail !== null) {
     insertRow['assignee_email'] = assigneeEmail;
+  }
+  if (est.value !== null) {
+    insertRow['estimate'] = est.value;
   }
 
   const { data, error } = await supabase
     .from('tasks')
     .insert(insertRow)
-    .select('id, title, description, status, assignee_email')
+    .select('id, title, description, status, assignee_email, estimate')
     .single();
 
   if (error) {
@@ -178,6 +209,15 @@ app.patch('/api/tasks/:id', async (req, res) => {
     }
   }
 
+  if (body.estimate !== undefined) {
+    const est = parseEstimate(body.estimate);
+    if (est.ok === false) {
+      res.status(400).json({ error: est.error });
+      return;
+    }
+    updates['estimate'] = est.value;
+  }
+
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: 'no fields to update' });
     return;
@@ -187,7 +227,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
     .from('tasks')
     .update(updates)
     .eq('id', id)
-    .select('id, title, description, status, assignee_email')
+    .select('id, title, description, status, assignee_email, estimate')
     .single();
 
   if (error) {
@@ -202,7 +242,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
 app.get('/api/tasks/archived', async (_req, res) => {
   const { data, error } = await supabase
     .from('tasks')
-    .select('id, title, description, status, created_at, assignee_email')
+    .select('id, title, description, status, created_at, assignee_email, estimate')
     .eq('archived', true)
     .order('created_at', { ascending: false });
 
@@ -224,7 +264,7 @@ app.patch('/api/tasks/:id/restore', async (req, res) => {
     .from('tasks')
     .update({ archived: false })
     .eq('id', id)
-    .select('id, title, description, status, assignee_email')
+    .select('id, title, description, status, assignee_email, estimate')
     .single();
 
   if (error) {

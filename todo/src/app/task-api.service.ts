@@ -8,6 +8,7 @@ export interface CreateTaskDto {
   title: string;
   description: string;
   status: TaskStatus;
+  estimate?: number | null;
 }
 
 export interface UpdateTaskDto {
@@ -15,6 +16,7 @@ export interface UpdateTaskDto {
   description?: string;
   status?: TaskStatus;
   assignee_email?: string | null;
+  estimate?: number | null;
 }
 
 @Injectable({ providedIn: 'root' })

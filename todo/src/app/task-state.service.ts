@@ -12,6 +12,8 @@ interface TaskState {
   formTitle: string;
   formDescription: string;
   formStatus: TaskStatus;
+  /** Fibonacci points 1–8, or null if not set. */
+  formEstimate: number | null;
   editingTaskId: number | null;
   formResetCounter: number;
   showFormModal: boolean;
@@ -29,6 +31,7 @@ const initialState: TaskState = {
   formTitle: '',
   formDescription: '',
   formStatus: TaskStatus.Todo,
+  formEstimate: null,
   editingTaskId: null,
   formResetCounter: 0,
   showFormModal: false,
@@ -89,6 +92,7 @@ export class TaskStateService {
   readonly formTitle = computed(() => this.state().formTitle);
   readonly formDescription = computed(() => this.state().formDescription);
   readonly formStatus = computed(() => this.state().formStatus);
+  readonly formEstimate = computed(() => this.state().formEstimate);
   readonly editingTaskId = computed(() => this.state().editingTaskId);
   readonly formResetCounter = computed(() => this.state().formResetCounter);
 
@@ -174,6 +178,7 @@ export class TaskStateService {
       formTitle: '',
       formDescription: '',
       formStatus: TaskStatus.Todo,
+      formEstimate: null,
       editingTaskId: null,
       formResetCounter: s.formResetCounter + 1,
     }));
@@ -187,6 +192,7 @@ export class TaskStateService {
       formTitle: '',
       formDescription: '',
       formStatus: status,
+      formEstimate: null,
       editingTaskId: null,
       formResetCounter: s.formResetCounter + 1,
     }));
@@ -199,6 +205,7 @@ export class TaskStateService {
       formTitle: task.title,
       formDescription: task.description,
       formStatus: task.status,
+      formEstimate: task.estimate ?? null,
       editingTaskId: task.id,
       formResetCounter: s.formResetCounter + 1,
     }));
@@ -214,6 +221,7 @@ export class TaskStateService {
       formTitle: '',
       formDescription: '',
       formStatus: TaskStatus.Todo,
+      formEstimate: null,
       formResetCounter: s.formResetCounter + 1,
     }));
   }
@@ -228,6 +236,10 @@ export class TaskStateService {
 
   setStatus(status: TaskStatus): void {
     this.state.update((s) => ({ ...s, formStatus: status }));
+  }
+
+  setEstimate(estimate: number | null): void {
+    this.state.update((s) => ({ ...s, formEstimate: estimate }));
   }
 
   submitForm(): void {
@@ -248,7 +260,14 @@ export class TaskStateService {
     if (!hasTaskDescription(s.formDescription)) return;
     if (s.formStatus === TaskStatus.Doing && this.workInProgressFull()) return;
 
-    this.api.createTask({ title: s.formTitle, description: s.formDescription, status: s.formStatus }).subscribe({
+    this.api
+      .createTask({
+        title: s.formTitle,
+        description: s.formDescription,
+        status: s.formStatus,
+        ...(s.formEstimate != null ? { estimate: s.formEstimate } : {}),
+      })
+      .subscribe({
       next: (created) => {
         this.state.update((state) => ({ ...state, tasks: [...state.tasks, created] }));
         this.closeFormModal();
@@ -267,6 +286,7 @@ export class TaskStateService {
       ...(s.formTitle.trim() ? { title: s.formTitle.trim() } : {}),
       description: s.formDescription.trim(),
       status: s.formStatus,
+      estimate: s.formEstimate,
     };
 
     this.api.updateTask(s.editingTaskId, updates).subscribe({

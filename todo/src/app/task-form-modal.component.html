@@ -32,7 +32,9 @@
       [description]="taskState.formDescription()"
       [formResetCounter]="taskState.formResetCounter()"
       [status]="taskState.formStatus()"
+      [estimate]="taskState.formEstimate()"
       [showStatus]="true"
+      [showEstimate]="true"
       [showLabels]="true"
       [disableDoingStatus]="taskState.disableDoingInForm()"
       [disableSubmit]="taskState.formSubmitDisabled()"
@@ -41,6 +43,7 @@
       (titleChange)="taskState.setTitle($event)"
       (descriptionChange)="taskState.setDescription($event)"
       (taskStatusChange)="taskState.setStatus($event)"
+      (estimateChange)="taskState.setEstimate($event)"
       (submitForm)="taskState.submitForm()"
       (clear)="taskState.resetFormFields()"
     />

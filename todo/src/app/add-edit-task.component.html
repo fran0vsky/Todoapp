@@ -33,6 +33,24 @@
         </select>
       </div>
     }
+    @if (showEstimate) {
+      <div class="w-36 flex flex-col gap-1 shrink-0">
+        @if (showLabels) {
+          <label class="text-neutral-300 text-sm">Estimate</label>
+        }
+        <select
+          [value]="estimate === null || estimate === undefined ? '' : estimate"
+          (change)="onEstimateChange($event)"
+          aria-label="Fibonacci difficulty estimate"
+          class="w-full rounded-xl bg-neutral-800 text-white px-4 py-3 border border-neutral-700 focus:outline-none focus:ring-2 focus:ring-purple-400 focus-visible:outline-none"
+        >
+          <option value="">—</option>
+          @for (pt of fibonacciEstimates; track pt) {
+            <option [value]="pt">{{ pt }}</option>
+          }
+        </select>
+      </div>
+    }
   </div>
 
   <div class="flex flex-col gap-1">
