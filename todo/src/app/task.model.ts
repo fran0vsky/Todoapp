@@ -10,6 +10,7 @@ export type FibonacciEstimate = (typeof FIBONACCI_ESTIMATES)[number];
 
 export interface Task {
   id: number;
+  project_id: number;
   title: string;
   description: string;
   status: TaskStatus;

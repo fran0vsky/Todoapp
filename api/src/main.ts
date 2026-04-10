@@ -3,12 +3,17 @@ import { supabase } from './supabase';
 
 type TaskStatus = 'todo' | 'doing' | 'done';
 
+type CreateProjectBody = {
+  name?: unknown;
+};
+
 type CreateTaskBody = {
   title?: unknown;
   description?: unknown;
   status?: unknown;
   assignee_email?: unknown;
   estimate?: unknown;
+  project_id?: unknown;
 };
 
 type UpdateTaskBody = {
@@ -80,13 +85,78 @@ app.get('/api/users', async (_req, res) => {
   res.json({ emails });
 });
 
+// ---------- PROJECTS ----------
+
+app.get('/api/projects', async (_req, res) => {
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, name, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.json(data);
+});
+
+app.get('/api/projects/:id', async (req, res) => {
+  const id = Number(req.params['id']);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: 'invalid project id' });
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('projects')
+    .select('id, name, created_at')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    res.status(error.code === 'PGRST116' ? 404 : 500).json({
+      error: error.code === 'PGRST116' ? 'project not found' : error.message,
+    });
+    return;
+  }
+  res.json(data);
+});
+
+app.post('/api/projects', async (req, res) => {
+  const body = req.body as CreateProjectBody;
+  const name = typeof body.name === 'string' ? body.name.trim() : '';
+  if (!name) {
+    res.status(400).json({ error: 'name is required' });
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('projects')
+    .insert({ name })
+    .select('id, name, created_at')
+    .single();
+
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  res.status(201).json(data);
+});
+
 // ---------- TASKS ----------
 
-app.get('/api/tasks', async (_req, res) => {
+app.get('/api/tasks', async (req, res) => {
+  const projectId = Number(req.query['projectId']);
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    res.status(400).json({ error: 'projectId query parameter is required' });
+    return;
+  }
+
   const { data, error } = await supabase
     .from('tasks')
-    .select('id, title, description, status, assignee_email, estimate')
+    .select('id, title, description, status, assignee_email, estimate, project_id')
     .eq('archived', false)
+    .eq('project_id', projectId)
     .order('created_at', { ascending: true });
 
   if (error) {
@@ -143,10 +213,17 @@ app.post('/api/tasks', async (req, res) => {
     insertRow['estimate'] = est.value;
   }
 
+  const projectId = body.project_id;
+  if (typeof projectId !== 'number' || !Number.isInteger(projectId) || projectId <= 0) {
+    res.status(400).json({ error: 'project_id must be a positive integer' });
+    return;
+  }
+  insertRow['project_id'] = projectId;
+
   const { data, error } = await supabase
     .from('tasks')
     .insert(insertRow)
-    .select('id, title, description, status, assignee_email, estimate')
+    .select('id, title, description, status, assignee_email, estimate, project_id')
     .single();
 
   if (error) {
@@ -227,7 +304,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
     .from('tasks')
     .update(updates)
     .eq('id', id)
-    .select('id, title, description, status, assignee_email, estimate')
+    .select('id, title, description, status, assignee_email, estimate, project_id')
     .single();
 
   if (error) {
@@ -239,11 +316,18 @@ app.patch('/api/tasks/:id', async (req, res) => {
   res.json(data);
 });
 
-app.get('/api/tasks/archived', async (_req, res) => {
+app.get('/api/tasks/archived', async (req, res) => {
+  const projectId = Number(req.query['projectId']);
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    res.status(400).json({ error: 'projectId query parameter is required' });
+    return;
+  }
+
   const { data, error } = await supabase
     .from('tasks')
-    .select('id, title, description, status, created_at, assignee_email, estimate')
+    .select('id, title, description, status, created_at, assignee_email, estimate, project_id')
     .eq('archived', true)
+    .eq('project_id', projectId)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -264,7 +348,7 @@ app.patch('/api/tasks/:id/restore', async (req, res) => {
     .from('tasks')
     .update({ archived: false })
     .eq('id', id)
-    .select('id, title, description, status, assignee_email, estimate')
+    .select('id, title, description, status, assignee_email, estimate, project_id')
     .single();
 
   if (error) {

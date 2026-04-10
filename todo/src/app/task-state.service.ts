@@ -8,6 +8,9 @@ interface TaskState {
   isLoading: boolean;
   archivedTasks: Task[];
   archiveLoading: boolean;
+  /** Active board scope (set when viewing a project). */
+  activeProjectId: number | null;
+  activeProjectName: string;
   formMode: 'add' | 'edit';
   formTitle: string;
   formDescription: string;
@@ -27,6 +30,8 @@ const initialState: TaskState = {
   isLoading: false,
   archivedTasks: [],
   archiveLoading: false,
+  activeProjectId: null,
+  activeProjectName: '',
   formMode: 'add',
   formTitle: '',
   formDescription: '',
@@ -61,6 +66,9 @@ export class TaskStateService {
   readonly showArchive = computed(() => this.state().showArchive);
   readonly showAssignModal = computed(() => this.state().showAssignModal);
   readonly taskForAssign = computed(() => this.state().taskForAssign);
+
+  readonly activeProjectId = computed(() => this.state().activeProjectId);
+  readonly activeProjectName = computed(() => this.state().activeProjectName);
 
   readonly assigneeFilter = this.assigneeFilterSig.asReadonly();
 
@@ -159,9 +167,32 @@ export class TaskStateService {
     this.assigneeFilterSig.set(raw as AssigneeFilter);
   }
 
+  /** Call when entering a project board (from route). Clears lists and sets scope. */
+  setActiveProject(projectId: number, projectName: string): void {
+    this.assigneeFilterSig.set('all');
+    this.state.update((s) => ({
+      ...s,
+      activeProjectId: projectId,
+      activeProjectName: projectName,
+      tasks: [],
+      archivedTasks: [],
+      showFormModal: false,
+      showAssignModal: false,
+      showArchive: false,
+    }));
+  }
+
+  /** Call when leaving the board (e.g. navigate to project list). */
+  clearProjectContext(): void {
+    this.assigneeFilterSig.set('all');
+    this.state.set(initialState);
+  }
+
   loadTasks(): void {
+    const pid = this.state().activeProjectId;
+    if (pid == null) return;
     this.state.update((s) => ({ ...s, isLoading: true }));
-    this.api.getTasks().subscribe({
+    this.api.getTasks(pid).subscribe({
       next: (tasks) => {
         this.state.update((s) => ({ ...s, tasks, isLoading: false }));
       },
@@ -259,9 +290,11 @@ export class TaskStateService {
     if (!s.formTitle.trim()) return;
     if (!hasTaskDescription(s.formDescription)) return;
     if (s.formStatus === TaskStatus.Doing && this.workInProgressFull()) return;
+    if (s.activeProjectId == null) return;
 
     this.api
       .createTask({
+        project_id: s.activeProjectId,
         title: s.formTitle,
         description: s.formDescription,
         status: s.formStatus,
@@ -316,8 +349,10 @@ export class TaskStateService {
   }
 
   openArchive(): void {
+    const pid = this.state().activeProjectId;
+    if (pid == null) return;
     this.state.update((s) => ({ ...s, showArchive: true, archiveLoading: true }));
-    this.api.getArchivedTasks().subscribe({
+    this.api.getArchivedTasks(pid).subscribe({
       next: (archivedTasks) => {
         this.state.update((s) => ({ ...s, archivedTasks, archiveLoading: false }));
       },

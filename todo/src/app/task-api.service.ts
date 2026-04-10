@@ -5,6 +5,7 @@ import { map } from 'rxjs/operators';
 import { Task, TaskStatus } from './task.model';
 
 export interface CreateTaskDto {
+  project_id: number;
   title: string;
   description: string;
   status: TaskStatus;
@@ -31,8 +32,10 @@ export class TaskApiService {
       .pipe(map((body) => body.emails ?? []));
   }
 
-  getTasks(): Observable<Task[]> {
-    return this.http.get<Task[]>(this.baseUrl);
+  getTasks(projectId: number): Observable<Task[]> {
+    return this.http.get<Task[]>(this.baseUrl, {
+      params: { projectId: String(projectId) },
+    });
   }
 
   createTask(payload: CreateTaskDto): Observable<Task> {
@@ -43,8 +46,10 @@ export class TaskApiService {
     return this.http.patch<Task>(`${this.baseUrl}/${id}`, payload);
   }
 
-  getArchivedTasks(): Observable<Task[]> {
-    return this.http.get<Task[]>(`${this.baseUrl}/archived`);
+  getArchivedTasks(projectId: number): Observable<Task[]> {
+    return this.http.get<Task[]>(`${this.baseUrl}/archived`, {
+      params: { projectId: String(projectId) },
+    });
   }
 
   restoreTask(id: number): Observable<Task> {

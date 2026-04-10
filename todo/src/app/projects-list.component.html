@@ -1,0 +1,68 @@
+<div class="flex flex-1 min-h-0 flex-col w-full max-w-[960px] mx-auto">
+  <app-home-navbar />
+
+  <header class="mb-8">
+    <h1 class="text-2xl font-semibold text-white tracking-tight">Projects</h1>
+    <p class="text-neutral-500 text-sm mt-1">Open a board or create a new project (starts with no tasks).</p>
+  </header>
+
+  <section
+    class="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 md:p-5 mb-8"
+    aria-labelledby="new-project-heading"
+  >
+    <h2 id="new-project-heading" class="text-neutral-300 text-sm font-medium mb-3">New project</h2>
+    <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
+      <div class="flex-1 min-w-0">
+        <label for="new-project-name" class="sr-only">Project name</label>
+        <input
+          id="new-project-name"
+          type="text"
+          [value]="newProjectName()"
+          (input)="onNameInput($any($event.target).value)"
+          (keydown.enter)="createProject()"
+          placeholder="Project name…"
+          class="w-full rounded-lg bg-neutral-900 border border-neutral-700 text-white placeholder-neutral-500 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/40"
+        />
+      </div>
+      <button
+        type="button"
+        (click)="createProject()"
+        [disabled]="!newProjectName().trim() || creating()"
+        class="rounded-lg bg-purple-500 text-white px-4 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:opacity-50 disabled:pointer-events-none shrink-0"
+      >
+        {{ creating() ? 'Creating…' : 'Create project' }}
+      </button>
+    </div>
+  </section>
+
+  @if (loading()) {
+    <div class="flex items-center gap-3 text-neutral-400 py-12 justify-center">
+      <span
+        class="inline-block w-5 h-5 border-2 border-neutral-500 border-t-purple-300 rounded-full animate-spin"
+        aria-hidden="true"
+      ></span>
+      <span>Loading projects…</span>
+    </div>
+  } @else if (projects().length === 0) {
+    <p class="text-neutral-500 text-sm text-center py-12 border border-dashed border-neutral-800 rounded-xl">
+      No projects yet. Add a name above to create one.
+    </p>
+  } @else {
+    <ul class="space-y-2" role="list">
+      @for (project of projects(); track project.id) {
+        <li
+          class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900/80 px-4 py-3 hover:border-neutral-700 transition-colors"
+        >
+          <span class="text-neutral-100 font-medium min-w-0 break-words">{{ project.name }}</span>
+          <button
+            type="button"
+            (click)="viewProject(project.id)"
+            class="rounded-lg bg-purple-500/15 text-purple-200 px-4 py-2 text-sm font-medium hover:bg-purple-500/25 focus:outline-none focus:ring-2 focus:ring-purple-400/40 shrink-0"
+          >
+            View
+          </button>
+        </li>
+      }
+    </ul>
+  }
+</div>

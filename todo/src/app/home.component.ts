@@ -1,14 +1,18 @@
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
+import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { EMPTY, Subject, switchMap, takeUntil } from 'rxjs';
 import { TaskFormModalComponent } from './task-form-modal.component';
 import { AssignTaskModalComponent } from './assign-task-modal.component';
 import { TaskBoardSmartComponent } from './task-board-smart.component';
 import { TaskStateService } from './task-state.service';
 import { HomeNavbarComponent } from './home-navbar.component';
+import { ProjectApiService } from './project-api.service';
 
 @Component({
   selector: 'app-home',
   standalone: true,
   imports: [
+    RouterModule,
     HomeNavbarComponent,
     TaskBoardSmartComponent,
     TaskFormModalComponent,
@@ -19,8 +23,12 @@ import { HomeNavbarComponent } from './home-navbar.component';
     class: 'flex flex-col flex-1 min-h-0',
   },
 })
-export class HomeComponent implements OnInit {
+export class HomeComponent implements OnInit, OnDestroy {
   protected readonly taskState = inject(TaskStateService);
+  private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
+  private readonly projectApi = inject(ProjectApiService);
+  private readonly destroy$ = new Subject<void>();
 
   /** Right-side archive panel: collapsed shows a narrow rail; expanded shows the list. */
   protected readonly archivePanelExpanded = signal(false);
@@ -42,6 +50,37 @@ export class HomeComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    this.taskState.loadTasks();
+    this.route.paramMap
+      .pipe(
+        takeUntil(this.destroy$),
+        switchMap((pm) => {
+          const raw = pm.get('projectId');
+          if (!raw) {
+            this.router.navigate(['/']);
+            return EMPTY;
+          }
+          const id = Number(raw);
+          if (!Number.isInteger(id) || id <= 0) {
+            this.router.navigate(['/']);
+            return EMPTY;
+          }
+          return this.projectApi.getProject(id);
+        })
+      )
+      .subscribe({
+        next: (project) => {
+          this.taskState.setActiveProject(project.id, project.name);
+          this.taskState.loadTasks();
+        },
+        error: () => {
+          this.router.navigate(['/']);
+        },
+      });
+  }
+
+  ngOnDestroy(): void {
+    this.destroy$.next();
+    this.destroy$.complete();
+    this.taskState.clearProjectContext();
   }
 }
