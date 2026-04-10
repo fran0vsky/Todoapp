@@ -1,9 +1,12 @@
 import { Injectable, signal, NgZone, inject, OnDestroy } from '@angular/core';
-import { from, Observable, Subject, timer, Subscription } from 'rxjs';
-import { AuthResponse, User, Session } from '@supabase/supabase-js';
+import { from, Observable, Subscription, timer } from 'rxjs';
+import { AuthResponse, User, Session, UserResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
-import { tap } from 'rxjs/operators';
+import { map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
+
+const NICKNAME_META_KEY = 'nickname';
+const MAX_NICKNAME_LENGTH = 40;
 
 @Injectable({ providedIn: 'root' })
 export class AuthService implements OnDestroy {
@@ -108,6 +111,41 @@ export class AuthService implements OnDestroy {
 
   signOut(): Observable<{ error: Error | null }> {
     return from(supabase.auth.signOut());
+  }
+
+  /** Shown in the UI: trimmed nickname if set, otherwise email. */
+  displayLabel(user: User | null): string {
+    if (!user) return '';
+    const raw = user.user_metadata?.[NICKNAME_META_KEY];
+    if (typeof raw === 'string') {
+      const t = raw.trim();
+      if (t.length > 0) return t;
+    }
+    return user.email ?? '';
+  }
+
+  /** Current nickname value for editing (may be empty). */
+  nicknameFromMetadata(user: User | null): string {
+    if (!user) return '';
+    const raw = user.user_metadata?.[NICKNAME_META_KEY];
+    return typeof raw === 'string' ? raw : '';
+  }
+
+  updateNickname(nickname: string): Observable<UserResponse> {
+    const trimmed = nickname.trim().slice(0, MAX_NICKNAME_LENGTH);
+    return from(
+      supabase.auth.updateUser({
+        data: { [NICKNAME_META_KEY]: trimmed.length > 0 ? trimmed : null },
+      })
+    ).pipe(
+      map((res) => {
+        if (res.error) throw res.error;
+        if (res.data.user) {
+          this.ngZone.run(() => this.currentUser.set(res.data.user));
+        }
+        return res;
+      })
+    );
   }
 
   signOutAndRedirect(): void {

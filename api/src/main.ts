@@ -78,11 +78,20 @@ app.get('/api/users', async (_req, res) => {
     res.status(500).json({ error: error.message });
     return;
   }
-  const emails = (data.users ?? [])
-    .map((u) => u.email)
-    .filter((e): e is string => typeof e === 'string' && e.length > 0)
-    .sort((a, b) => a.localeCompare(b));
-  res.json({ emails });
+  const users = (data.users ?? [])
+    .map((u) => {
+      const email = typeof u.email === 'string' ? u.email : '';
+      const raw = u.user_metadata?.['nickname'];
+      let nickname: string | null = null;
+      if (typeof raw === 'string') {
+        const t = raw.trim();
+        nickname = t.length > 0 ? t : null;
+      }
+      return { email, nickname };
+    })
+    .filter((row) => row.email.length > 0)
+    .sort((a, b) => a.email.localeCompare(b.email));
+  res.json({ users });
 });
 
 // ---------- PROJECTS ----------

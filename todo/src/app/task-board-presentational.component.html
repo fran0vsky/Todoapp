@@ -48,7 +48,7 @@
                     <span
                       class="text-[0.6875rem] leading-tight text-neutral-500 truncate text-right"
                       [title]="task.assignee_email"
-                      >{{ task.assignee_email }}</span
+                      >{{ assigneeLabel(task.assignee_email) }}</span
                     >
                   }
                   @if (task.estimate != null) {
@@ -154,7 +154,7 @@
                     <span
                       class="text-[0.6875rem] leading-tight text-neutral-500 truncate text-right"
                       [title]="task.assignee_email"
-                      >{{ task.assignee_email }}</span
+                      >{{ assigneeLabel(task.assignee_email) }}</span
                     >
                   }
                   @if (task.estimate != null) {
@@ -255,7 +255,7 @@
                     <span
                       class="text-[0.6875rem] leading-tight text-neutral-500 truncate text-right"
                       [title]="task.assignee_email"
-                      >{{ task.assignee_email }}</span
+                      >{{ assigneeLabel(task.assignee_email) }}</span
                     >
                   }
                   @if (task.estimate != null) {

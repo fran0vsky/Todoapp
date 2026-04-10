@@ -18,6 +18,8 @@ export class TaskBoardPresentationalComponent {
   @Input() tasksToBeDone: Task[] = [];
   @Input() tasksWorkingOnIt: Task[] = [];
   @Input() tasksDone: Task[] = [];
+  /** Resolve assignee_email to nickname (or email). */
+  @Input() assigneeLabel: (email: string | null | undefined) => string = (e) => e?.trim() ?? '';
 
   @Output() openAddWithStatus = new EventEmitter<TaskStatus>();
   @Output() startEdit = new EventEmitter<Task>();

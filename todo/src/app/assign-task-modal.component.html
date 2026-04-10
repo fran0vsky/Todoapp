@@ -30,7 +30,7 @@
     @if (taskState.taskForAssign(); as task) {
       <p class="text-neutral-500 text-sm mb-4 truncate" [title]="task.title">{{ task.title }}</p>
 
-      @if (usersLoading()) {
+      @if (taskState.assignableUsersLoading()) {
         <div class="flex items-center gap-3 text-neutral-400 text-sm py-6">
           <span
             class="inline-block w-5 h-5 border-2 border-neutral-500 border-t-purple-300 rounded-full animate-spin shrink-0"
@@ -38,11 +38,11 @@
           ></span>
           <span>Loading registered users…</span>
         </div>
-      } @else if (usersLoadFailed()) {
+      } @else if (taskState.assignableUsersLoadError(); as errMsg) {
         <div class="space-y-3 mb-6" role="alert">
           <p class="text-amber-200/90 text-sm font-medium">Could not load registered users.</p>
           <p class="text-neutral-400 text-xs break-words rounded-lg bg-neutral-950/80 border border-neutral-800 px-3 py-2 font-mono">
-            {{ usersLoadError() }}
+            {{ errMsg }}
           </p>
           <p class="text-neutral-500 text-xs leading-relaxed">
             If you see “Bearer token” or “service role”: open
@@ -54,7 +54,7 @@
             <span class="text-neutral-300">npx nx serve api</span>.
           </p>
         </div>
-      } @else if (userEmails().length === 0) {
+      } @else if (taskState.assignableUsers().length === 0) {
         <p class="text-neutral-400 text-sm mb-6" role="status">
           No registered users yet. Sign up accounts first, then you can assign tasks here.
         </p>
@@ -70,8 +70,8 @@
                 aria-label="Registered user to assign"
               >
                 <option value="">Choose a user…</option>
-                @for (email of userEmails(); track email) {
-                  <option [value]="email">{{ email }}</option>
+                @for (u of taskState.assignableUsers(); track u.email) {
+                  <option [value]="u.email">{{ taskState.assigneeOptionLabel(u) }}</option>
                 }
               </select>
               <span
@@ -115,7 +115,7 @@
         </form>
       }
 
-      @if (!usersLoading() && (usersLoadFailed() || userEmails().length === 0)) {
+      @if (!taskState.assignableUsersLoading() && (taskState.assignableUsersLoadError() || taskState.assignableUsers().length === 0)) {
         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap pt-2">
           <button
             type="button"

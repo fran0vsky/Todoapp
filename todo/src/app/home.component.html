@@ -42,7 +42,7 @@
               <option value="all">All assignees</option>
               <option value="unassigned">Unassigned</option>
               @for (email of taskState.assigneeFilterOptions(); track email) {
-                <option [value]="email">{{ email }}</option>
+                <option [value]="email">{{ taskState.assigneeLabel(email) }}</option>
               }
             </select>
           </div>
@@ -143,7 +143,7 @@
                                 <span
                                   class="text-[0.65rem] text-neutral-500 truncate text-right"
                                   [title]="task.assignee_email"
-                                  >{{ task.assignee_email }}</span
+                                  >{{ taskState.assigneeLabel(task.assignee_email) }}</span
                                 >
                               }
                               @if (task.estimate != null) {

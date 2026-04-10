@@ -13,4 +13,7 @@ import { TaskStateService } from './task-state.service';
 })
 export class TaskBoardSmartComponent {
   protected readonly taskState = inject(TaskStateService);
+
+  protected readonly assigneeLabelFn = (email: string | null | undefined) =>
+    this.taskState.assigneeLabel(email);
 }

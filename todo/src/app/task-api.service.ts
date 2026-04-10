@@ -4,6 +4,11 @@ import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
 import { Task, TaskStatus } from './task.model';
 
+export interface AssignableUser {
+  email: string;
+  nickname: string | null;
+}
+
 export interface CreateTaskDto {
   project_id: number;
   title: string;
@@ -26,10 +31,10 @@ export class TaskApiService {
   private readonly baseUrl = 'http://localhost:3333/api/tasks';
   private readonly usersUrl = 'http://localhost:3333/api/users';
 
-  getAssignableUserEmails(): Observable<string[]> {
+  getAssignableUsers(): Observable<AssignableUser[]> {
     return this.http
-      .get<{ emails: string[] }>(this.usersUrl)
-      .pipe(map((body) => body.emails ?? []));
+      .get<{ users: AssignableUser[] }>(this.usersUrl)
+      .pipe(map((body) => body.users ?? []));
   }
 
   getTasks(projectId: number): Observable<Task[]> {

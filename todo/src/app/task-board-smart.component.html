@@ -4,6 +4,7 @@
   [workInProgressFull]="taskState.workInProgressFull()"
   [tasksWorkingOnIt]="taskState.tasksWorkingOnIt()"
   [tasksDone]="taskState.tasksDone()"
+  [assigneeLabel]="assigneeLabelFn"
   (openAddWithStatus)="taskState.openAddFormWithStatus($event)"
   (startEdit)="taskState.startEdit($event)"
   (removeTask)="taskState.removeTask($event)"

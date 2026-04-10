@@ -1,6 +1,9 @@
+import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
+import { Observable, of } from 'rxjs';
+import { catchError, finalize, tap } from 'rxjs/operators';
 import { Task, TaskStatus } from './task.model';
-import { TaskApiService } from './task-api.service';
+import { AssignableUser, TaskApiService } from './task-api.service';
 import { hasTaskDescription } from './task-description.util';
 
 interface TaskState {
@@ -56,6 +59,15 @@ export class TaskStateService {
 
   /** Global board filter: all tasks, only unassigned, or a specific assignee email. */
   private readonly assigneeFilterSig = signal<AssigneeFilter>('all');
+
+  /** From GET /api/users (nicknames for assignee display). */
+  private readonly assignableUsersSig = signal<AssignableUser[]>([]);
+  private readonly assignableUsersLoadingSig = signal(false);
+  private readonly assignableUsersLoadErrorSig = signal<string | null>(null);
+
+  readonly assignableUsers = this.assignableUsersSig.asReadonly();
+  readonly assignableUsersLoading = this.assignableUsersLoadingSig.asReadonly();
+  readonly assignableUsersLoadError = this.assignableUsersLoadErrorSig.asReadonly();
 
   // Public selectors
   readonly tasks = computed(() => this.state().tasks);
@@ -170,6 +182,8 @@ export class TaskStateService {
   /** Call when entering a project board (from route). Clears lists and sets scope. */
   setActiveProject(projectId: number, projectName: string): void {
     this.assigneeFilterSig.set('all');
+    this.assignableUsersSig.set([]);
+    this.assignableUsersLoadErrorSig.set(null);
     this.state.update((s) => ({
       ...s,
       activeProjectId: projectId,
@@ -185,7 +199,54 @@ export class TaskStateService {
   /** Call when leaving the board (e.g. navigate to project list). */
   clearProjectContext(): void {
     this.assigneeFilterSig.set('all');
+    this.assignableUsersSig.set([]);
+    this.assignableUsersLoadErrorSig.set(null);
     this.state.set(initialState);
+  }
+
+  /** Loads registered users for nickname display and the assign modal. Safe to call repeatedly. */
+  refreshAssignableUsers(): Observable<AssignableUser[]> {
+    this.assignableUsersLoadingSig.set(true);
+    this.assignableUsersLoadErrorSig.set(null);
+    return this.api.getAssignableUsers().pipe(
+      tap((users) => this.assignableUsersSig.set(users)),
+      finalize(() => this.assignableUsersLoadingSig.set(false)),
+      catchError((err: unknown) => {
+        this.assignableUsersLoadErrorSig.set(this.usersListErrorMessage(err));
+        return of([]);
+      })
+    );
+  }
+
+  /** Short label for the card/filter: nickname if set, else email. */
+  assigneeLabel(email: string | null | undefined): string {
+    const e = email?.trim();
+    if (!e) return '';
+    const u = this.assignableUsersSig().find((x) => x.email === e);
+    const n = u?.nickname?.trim();
+    if (n) return n;
+    return e;
+  }
+
+  /** Assign modal: nickname + email when nickname exists. */
+  assigneeOptionLabel(user: AssignableUser): string {
+    const n = user.nickname?.trim();
+    if (n) return `${n} (${user.email})`;
+    return user.email;
+  }
+
+  private usersListErrorMessage(err: unknown): string {
+    if (err instanceof HttpErrorResponse) {
+      if (err.status === 0) {
+        return 'Cannot reach the API (connection failed). In a second terminal run: npx nx serve api — then reload this page.';
+      }
+      const body = err.error;
+      if (typeof body === 'object' && body !== null && 'error' in body) {
+        return String((body as { error: string }).error);
+      }
+      return err.message;
+    }
+    return 'Could not load users.';
   }
 
   loadTasks(): void {
@@ -195,6 +256,7 @@ export class TaskStateService {
     this.api.getTasks(pid).subscribe({
       next: (tasks) => {
         this.state.update((s) => ({ ...s, tasks, isLoading: false }));
+        this.refreshAssignableUsers().subscribe();
       },
       error: () => {
         this.state.update((s) => ({ ...s, isLoading: false }));
@@ -351,6 +413,7 @@ export class TaskStateService {
   openArchive(): void {
     const pid = this.state().activeProjectId;
     if (pid == null) return;
+    this.refreshAssignableUsers().subscribe();
     this.state.update((s) => ({ ...s, showArchive: true, archiveLoading: true }));
     this.api.getArchivedTasks(pid).subscribe({
       next: (archivedTasks) => {
