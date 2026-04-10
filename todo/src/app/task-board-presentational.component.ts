@@ -4,7 +4,6 @@ import { Task, TaskStatus } from './task.model';
 
 @Component({
   selector: 'app-task-board-presentational',
-  standalone: true,
   imports: [SafeHtmlPipe],
   templateUrl: './task-board-presentational.component.html',
   host: {
@@ -24,4 +23,5 @@ export class TaskBoardPresentationalComponent {
   @Output() startEdit = new EventEmitter<Task>();
   @Output() removeTask = new EventEmitter<number>();
   @Output() archiveTask = new EventEmitter<number>();
+  @Output() assignTask = new EventEmitter<Task>();
 }

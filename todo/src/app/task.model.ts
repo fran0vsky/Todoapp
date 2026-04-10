@@ -9,5 +9,7 @@ export interface Task {
   title: string;
   description: string;
   status: TaskStatus;
+  /** Set when a user is assigned; omitted or null when unassigned. */
+  assignee_email?: string | null;
 }
 

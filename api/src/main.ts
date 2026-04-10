@@ -7,13 +7,18 @@ type CreateTaskBody = {
   title?: unknown;
   description?: unknown;
   status?: unknown;
+  assignee_email?: unknown;
 };
 
 type UpdateTaskBody = {
   title?: unknown;
   description?: unknown;
   status?: unknown;
+  assignee_email?: unknown;
 };
+
+const isSimpleEmail = (value: string): boolean =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 
 const isTaskStatus = (value: unknown): value is TaskStatus =>
   value === 'todo' || value === 'doing' || value === 'done';
@@ -38,12 +43,27 @@ app.get('/api/health', (_req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- USERS (for task assignment picker; requires service-role Supabase key) ----------
+
+app.get('/api/users', async (_req, res) => {
+  const { data, error } = await supabase.auth.admin.listUsers({ perPage: 200 });
+  if (error) {
+    res.status(500).json({ error: error.message });
+    return;
+  }
+  const emails = (data.users ?? [])
+    .map((u) => u.email)
+    .filter((e): e is string => typeof e === 'string' && e.length > 0)
+    .sort((a, b) => a.localeCompare(b));
+  res.json({ emails });
+});
+
 // ---------- TASKS ----------
 
 app.get('/api/tasks', async (_req, res) => {
   const { data, error } = await supabase
     .from('tasks')
-    .select('id, title, description, status')
+    .select('id, title, description, status, assignee_email')
     .eq('archived', false)
     .order('created_at', { ascending: true });
 
@@ -61,6 +81,23 @@ app.post('/api/tasks', async (req, res) => {
     typeof body.description === 'string' ? body.description.trim() : '';
   const status = body.status;
 
+  let assigneeEmail: string | null = null;
+  if (body.assignee_email !== undefined && body.assignee_email !== null) {
+    if (typeof body.assignee_email !== 'string') {
+      res.status(400).json({ error: 'assignee_email must be a string or null' });
+      return;
+    }
+    const trimmed = body.assignee_email.trim();
+    if (trimmed === '') {
+      assigneeEmail = null;
+    } else if (!isSimpleEmail(trimmed)) {
+      res.status(400).json({ error: 'assignee_email must be a valid email' });
+      return;
+    } else {
+      assigneeEmail = trimmed;
+    }
+  }
+
   if (!title) {
     res.status(400).json({ error: 'title is required' });
     return;
@@ -70,10 +107,15 @@ app.post('/api/tasks', async (req, res) => {
     return;
   }
 
+  const insertRow: Record<string, unknown> = { title, description, status };
+  if (assigneeEmail !== null) {
+    insertRow['assignee_email'] = assigneeEmail;
+  }
+
   const { data, error } = await supabase
     .from('tasks')
-    .insert({ title, description, status })
-    .select('id, title, description, status')
+    .insert(insertRow)
+    .select('id, title, description, status, assignee_email')
     .single();
 
   if (error) {
@@ -117,6 +159,25 @@ app.patch('/api/tasks/:id', async (req, res) => {
     updates['status'] = body.status;
   }
 
+  if (body.assignee_email !== undefined) {
+    if (body.assignee_email === null) {
+      updates['assignee_email'] = null;
+    } else if (typeof body.assignee_email === 'string') {
+      const trimmed = body.assignee_email.trim();
+      if (trimmed === '') {
+        updates['assignee_email'] = null;
+      } else if (!isSimpleEmail(trimmed)) {
+        res.status(400).json({ error: 'assignee_email must be a valid email' });
+        return;
+      } else {
+        updates['assignee_email'] = trimmed;
+      }
+    } else {
+      res.status(400).json({ error: 'assignee_email must be a string or null' });
+      return;
+    }
+  }
+
   if (Object.keys(updates).length === 0) {
     res.status(400).json({ error: 'no fields to update' });
     return;
@@ -126,7 +187,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
     .from('tasks')
     .update(updates)
     .eq('id', id)
-    .select('id, title, description, status')
+    .select('id, title, description, status, assignee_email')
     .single();
 
   if (error) {
@@ -141,7 +202,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
 app.get('/api/tasks/archived', async (_req, res) => {
   const { data, error } = await supabase
     .from('tasks')
-    .select('id, title, description, status, created_at')
+    .select('id, title, description, status, created_at, assignee_email')
     .eq('archived', true)
     .order('created_at', { ascending: false });
 
@@ -163,7 +224,7 @@ app.patch('/api/tasks/:id/restore', async (req, res) => {
     .from('tasks')
     .update({ archived: false })
     .eq('id', id)
-    .select('id, title, description, status')
+    .select('id, title, description, status, assignee_email')
     .single();
 
   if (error) {

@@ -1,5 +1,6 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { TaskFormModalComponent } from './task-form-modal.component';
+import { AssignTaskModalComponent } from './assign-task-modal.component';
 import { TaskBoardSmartComponent } from './task-board-smart.component';
 import { TaskStateService } from './task-state.service';
 import { HomeNavbarComponent } from './home-navbar.component';
@@ -7,7 +8,12 @@ import { HomeNavbarComponent } from './home-navbar.component';
 @Component({
   selector: 'app-home',
   standalone: true,
-  imports: [HomeNavbarComponent, TaskBoardSmartComponent, TaskFormModalComponent],
+  imports: [
+    HomeNavbarComponent,
+    TaskBoardSmartComponent,
+    TaskFormModalComponent,
+    AssignTaskModalComponent,
+  ],
   templateUrl: './home.component.html',
   host: {
     class: 'flex flex-col flex-1 min-h-0',

@@ -2,7 +2,6 @@ import { computed, inject, Injectable, signal } from '@angular/core';
 import { Task, TaskStatus } from './task.model';
 import { TaskApiService } from './task-api.service';
 import { hasTaskDescription } from './task-description.util';
-import { Observable, tap } from 'rxjs';
 
 interface TaskState {
   tasks: Task[];
@@ -17,6 +16,8 @@ interface TaskState {
   formResetCounter: number;
   showFormModal: boolean;
   showArchive: boolean;
+  showAssignModal: boolean;
+  taskForAssign: Task | null;
 }
 
 const initialState: TaskState = {
@@ -32,6 +33,8 @@ const initialState: TaskState = {
   formResetCounter: 0,
   showFormModal: false,
   showArchive: false,
+  showAssignModal: false,
+  taskForAssign: null,
 };
 
 @Injectable({ providedIn: 'root' })
@@ -48,6 +51,8 @@ export class TaskStateService {
   readonly archiveLoading = computed(() => this.state().archiveLoading);
   readonly showFormModal = computed(() => this.state().showFormModal);
   readonly showArchive = computed(() => this.state().showArchive);
+  readonly showAssignModal = computed(() => this.state().showAssignModal);
+  readonly taskForAssign = computed(() => this.state().taskForAssign);
 
   // Form state selectors
   readonly formMode = computed(() => this.state().formMode);
@@ -278,6 +283,30 @@ export class TaskStateService {
         this.state.update((s) => ({ ...s,
           archivedTasks: s.archivedTasks.filter((t) => t.id !== id),
           tasks: [...s.tasks, restored],
+        }));
+      },
+    });
+  }
+
+  openAssignTask(task: Task): void {
+    this.state.update((s) => ({ ...s, showAssignModal: true, taskForAssign: task }));
+  }
+
+  closeAssignModal(): void {
+    this.state.update((s) => ({ ...s, showAssignModal: false, taskForAssign: null }));
+  }
+
+  setTaskAssignee(email: string | null): void {
+    const task = this.state().taskForAssign;
+    if (!task) return;
+
+    this.api.updateTask(task.id, { assignee_email: email }).subscribe({
+      next: (updated) => {
+        this.state.update((s) => ({
+          ...s,
+          tasks: s.tasks.map((t) => (t.id === updated.id ? updated : t)),
+          showAssignModal: false,
+          taskForAssign: null,
         }));
       },
     });

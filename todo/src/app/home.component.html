@@ -20,6 +20,10 @@
           <app-task-form-modal />
         }
 
+        @if (taskState.showAssignModal()) {
+          <app-assign-task-modal />
+        }
+
         <app-task-board-smart />
       </div>
 
