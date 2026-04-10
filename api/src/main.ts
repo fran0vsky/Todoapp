@@ -1,4 +1,5 @@
 import express from 'express';
+import type { User } from '@supabase/supabase-js';
 import { supabase } from './supabase';
 
 type TaskStatus = 'todo' | 'doing' | 'done';
@@ -50,6 +51,22 @@ const isSimpleEmail = (value: string): boolean =>
 const isTaskStatus = (value: unknown): value is TaskStatus =>
   value === 'todo' || value === 'doing' || value === 'done';
 
+async function getUserFromBearer(req: express.Request): Promise<User | null> {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    return null;
+  }
+  const token = authHeader.slice(7).trim();
+  if (!token) {
+    return null;
+  }
+  const { data, error } = await supabase.auth.getUser(token);
+  if (error || !data.user) {
+    return null;
+  }
+  return data.user;
+}
+
 const app = express();
 const port = process.env['PORT'] ?? 3333;
 
@@ -58,7 +75,7 @@ app.use(express.json());
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'http://localhost:4200');
   res.header('Access-Control-Allow-Methods', 'GET,POST,PATCH,DELETE,OPTIONS');
-  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
   if (req.method === 'OPTIONS') {
     res.sendStatus(204);
     return;
@@ -150,6 +167,54 @@ app.post('/api/projects', async (req, res) => {
     return;
   }
   res.status(201).json(data);
+});
+
+app.delete('/api/projects/:id', async (req, res) => {
+  const user = await getUserFromBearer(req);
+  if (!user) {
+    res.status(401).json({ error: 'authorization required' });
+    return;
+  }
+  const adminEmail = (process.env['ADMIN_EMAIL'] ?? 'admin@admin.com').trim().toLowerCase();
+  if (user.email?.trim().toLowerCase() !== adminEmail) {
+    res.status(403).json({ error: 'only the admin can delete projects' });
+    return;
+  }
+
+  const id = Number(req.params['id']);
+  if (!Number.isInteger(id) || id <= 0) {
+    res.status(400).json({ error: 'invalid project id' });
+    return;
+  }
+
+  const { data: project, error: fetchErr } = await supabase
+    .from('projects')
+    .select('id')
+    .eq('id', id)
+    .maybeSingle();
+
+  if (fetchErr) {
+    res.status(500).json({ error: fetchErr.message });
+    return;
+  }
+  if (!project) {
+    res.status(404).json({ error: 'project not found' });
+    return;
+  }
+
+  const { error: taskErr } = await supabase.from('tasks').delete().eq('project_id', id);
+  if (taskErr) {
+    res.status(500).json({ error: taskErr.message });
+    return;
+  }
+
+  const { error: projErr } = await supabase.from('projects').delete().eq('id', id);
+  if (projErr) {
+    res.status(500).json({ error: projErr.message });
+    return;
+  }
+
+  res.status(204).send();
 });
 
 // ---------- TASKS ----------

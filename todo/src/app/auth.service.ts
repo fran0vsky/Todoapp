@@ -1,7 +1,8 @@
-import { Injectable, signal, NgZone, inject, OnDestroy } from '@angular/core';
+import { computed, Injectable, inject, NgZone, OnDestroy, signal } from '@angular/core';
 import { from, Observable, Subscription, timer } from 'rxjs';
 import { AuthResponse, User, Session, UserResponse } from '@supabase/supabase-js';
 import { supabase } from './supabase';
+import { ADMIN_EMAIL } from './admin.config';
 import { map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 
@@ -11,6 +12,12 @@ const MAX_NICKNAME_LENGTH = 40;
 @Injectable({ providedIn: 'root' })
 export class AuthService implements OnDestroy {
   readonly currentUser = signal<User | null>(null);
+
+  /** Matches server ADMIN_EMAIL; used to enable admin-only UI (e.g. delete project). */
+  readonly isAdmin = computed(() => {
+    const e = this.currentUser()?.email?.trim().toLowerCase();
+    return e === ADMIN_EMAIL.toLowerCase();
+  });
   private readonly ngZone = inject(NgZone);
   private readonly router = inject(Router);
 

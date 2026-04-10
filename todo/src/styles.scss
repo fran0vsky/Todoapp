@@ -23,4 +23,44 @@ app-root {
   min-height: 0;
 }
 
+/* Internal scroll: dark thumb on transparent track (matches black/purple UI) */
+@layer utilities {
+  .scrollbar-dark {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(64, 64, 64, 0.75) transparent;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-thumb {
+    background: rgba(38, 38, 38, 0.95);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-thumb:hover {
+    background: rgba(64, 64, 64, 0.95);
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+
+  .scrollbar-dark::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+}
+
 /* You can add global styles to this file, and also import other style files */
