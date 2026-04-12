@@ -1,4 +1,6 @@
 import express from 'express';
+import './supabase';
+import { getAuthConfig } from './controllers/auth.controller';
 import { getHealth } from './controllers/health.controller';
 import {
   deleteProject,
@@ -34,6 +36,9 @@ app.use((req, res, next) => {
 });
 
 app.get('/api/health', getHealth);
+
+/** Public Supabase URL + anon key for the Angular client (see todo supabase.client + APP_INITIALIZER). */
+app.get('/api/auth', getAuthConfig);
 
 // ---------- USERS (for task assignment picker; requires service-role Supabase key) ----------
 

@@ -2,6 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
+import { API_BASE_URL } from './api-base';
 import { Task, TaskStatus } from './task.model';
 
 export interface AssignableUser {
@@ -28,8 +29,8 @@ export interface UpdateTaskDto {
 @Injectable({ providedIn: 'root' })
 export class TaskApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:3333/api/tasks';
-  private readonly usersUrl = 'http://localhost:3333/api/users';
+  private readonly baseUrl = `${API_BASE_URL}/api/tasks`;
+  private readonly usersUrl = `${API_BASE_URL}/api/users`;
 
   getAssignableUsers(): Observable<AssignableUser[]> {
     return this.http

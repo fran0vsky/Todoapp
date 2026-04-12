@@ -1,7 +1,7 @@
 import { computed, Injectable, inject, NgZone, OnDestroy, signal } from '@angular/core';
 import { from, Observable, Subscription, timer } from 'rxjs';
 import { AuthResponse, User, Session, UserResponse } from '@supabase/supabase-js';
-import { supabase } from './supabase';
+import { getSupabase } from './supabase.client';
 import { ADMIN_EMAIL } from './admin.config';
 import { map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
@@ -25,7 +25,7 @@ export class AuthService implements OnDestroy {
   private readonly SESSION_TIMEOUT_SECONDS = 3600; // FOR TESTING: 10 seconds. Set to 3600 for 1 hour.
 
   constructor() {
-    supabase.auth.onAuthStateChange((event, session) => {
+    getSupabase().auth.onAuthStateChange((event, session) => {
       this.ngZone.run(() => {
         this.currentUser.set(session?.user ?? null);
         if (session) {
@@ -39,7 +39,7 @@ export class AuthService implements OnDestroy {
     });
 
     // Check current session on service init (e.g., page refresh)
-    from(supabase.auth.getSession()).subscribe(({ data: { session } }) => {
+    from(getSupabase().auth.getSession()).subscribe(({ data: { session } }) => {
       this.ngZone.run(() => {
         this.currentUser.set(session?.user ?? null);
         if (session) {
@@ -95,7 +95,7 @@ export class AuthService implements OnDestroy {
   }
 
   signUp(email: string, password: string): Observable<AuthResponse> {
-    return from(supabase.auth.signUp({ email, password })).pipe(
+    return from(getSupabase().auth.signUp({ email, password })).pipe(
       tap(response => {
         if (response.data.session) {
           console.log('[AuthService] Sign up successful. Starting timer.');
@@ -106,7 +106,7 @@ export class AuthService implements OnDestroy {
   }
 
   signIn(email: string, password: string): Observable<AuthResponse> {
-    return from(supabase.auth.signInWithPassword({ email, password })).pipe(
+    return from(getSupabase().auth.signInWithPassword({ email, password })).pipe(
       tap(response => {
         if (response.data.session) {
           console.log('[AuthService] Sign in successful. Starting timer.');
@@ -117,7 +117,7 @@ export class AuthService implements OnDestroy {
   }
 
   signOut(): Observable<{ error: Error | null }> {
-    return from(supabase.auth.signOut());
+    return from(getSupabase().auth.signOut());
   }
 
   /** Shown in the UI: trimmed nickname if set, otherwise email. */
@@ -141,7 +141,7 @@ export class AuthService implements OnDestroy {
   updateNickname(nickname: string): Observable<UserResponse> {
     const trimmed = nickname.trim().slice(0, MAX_NICKNAME_LENGTH);
     return from(
-      supabase.auth.updateUser({
+      getSupabase().auth.updateUser({
         data: { [NICKNAME_META_KEY]: trimmed.length > 0 ? trimmed : null },
       })
     ).pipe(

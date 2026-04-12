@@ -3,7 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, from, throwError } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
 import { Project } from './project.model';
-import { supabase } from './supabase';
+import { API_BASE_URL } from './api-base';
+import { getSupabase } from './supabase.client';
 
 export interface CreateProjectDto {
   name: string;
@@ -12,7 +13,7 @@ export interface CreateProjectDto {
 @Injectable({ providedIn: 'root' })
 export class ProjectApiService {
   private readonly http = inject(HttpClient);
-  private readonly baseUrl = 'http://localhost:3333/api/projects';
+  private readonly baseUrl = `${API_BASE_URL}/api/projects`;
 
   getProjects(): Observable<Project[]> {
     return this.http.get<Project[]>(this.baseUrl);
@@ -27,7 +28,7 @@ export class ProjectApiService {
   }
 
   deleteProject(id: number): Observable<void> {
-    return from(supabase.auth.getSession()).pipe(
+    return from(getSupabase().auth.getSession()).pipe(
       switchMap(({ data: { session } }) => {
         if (!session?.access_token) {
           return throwError(() => new Error('Not signed in'));
