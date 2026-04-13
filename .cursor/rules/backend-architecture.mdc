@@ -1,0 +1,104 @@
+---
+description: Backend architecture and coding standards for the Express + Supabase API
+globs: api/**/*.ts
+alwaysApply: false
+---
+
+# Backend Architecture
+
+The API is an **Express 5** Node.js server using **Supabase** (service-role key) as the database and auth backend. It is an Nx project built with `@nx/esbuild` and served with `@nx/js:node`.
+
+## Project Structure
+
+```
+api/src/
+  main.ts          ← app setup, middleware, all route registrations
+  supabase.ts      ← single Supabase client (service-role)
+  types.ts         ← request body shapes (CreateTaskBody, etc.)
+  controllers/     ← thin request handlers; one function per route
+  services/        ← Supabase queries, validation, auth helpers
+```
+
+- **No class-based controllers.** Use plain exported async functions.
+- Keep `main.ts` as the single source of truth for route registration order and middleware.
+
+## Supabase Client
+
+- One shared `supabase` client exported from `api/src/supabase.ts` (service-role key).
+- Never create additional Supabase clients inside controllers or services.
+- For user-scoped operations requiring RLS, pass the user's JWT to `supabase.auth.getUser(token)` via `getUserFromBearer()`.
+
+## Request Handling Pattern
+
+All controllers follow the same flow — validate early, return on error, then call service:
+
+```typescript
+// ✅ GOOD
+export const createTask: RequestHandler = async (req, res) => {
+  const { title, status } = req.body as CreateTaskBody;
+  if (!title || !isTaskStatus(status)) {
+    return res.status(400).json({ error: 'Invalid input' });
+  }
+  const { data, error } = await taskService.create({ title, status });
+  if (error) return res.status(500).json({ error: error.message });
+  res.status(201).json(data);
+};
+
+// ❌ BAD — no validation, errors swallowed
+export const createTask: RequestHandler = async (req, res) => {
+  const data = await taskService.create(req.body);
+  res.json(data);
+};
+```
+
+## Services
+
+- Services are thin wrappers around `supabase.from(table)` calls.
+- Each service function returns the raw `{ data, error }` tuple — let the controller decide the HTTP status.
+- Validation helpers (`isTaskStatus`, `parseEstimate`, `isSimpleEmail`) live in `services/validation.ts`. Always validate inputs here before touching the DB.
+- For table names, column conventions, and query patterns see `database.mdc`.
+
+```typescript
+// ✅ GOOD
+export const getTasksByProject = (projectId: string) =>
+  supabase.from('tasks').select('*').eq('project_id', projectId).eq('archived', false);
+```
+
+## Auth & Authorization
+
+- `GET /api/auth` returns `{ url, anonKey }` for the Angular client — the only public Supabase credential exposure.
+- Admin-only routes (e.g. `DELETE /api/projects/:id`) require a Bearer token validated with `getUserFromBearer` + `isAdmin` (email match against `ADMIN_EMAIL` env var).
+- Never expose the service-role key to the frontend.
+
+```typescript
+// ✅ Admin guard pattern
+const user = await getUserFromBearer(req);
+if (!user || !isAdmin(user)) return res.status(403).json({ error: 'Forbidden' });
+```
+
+## Error Handling
+
+| Scenario | Status | Body shape |
+|---|---|---|
+| Missing / invalid input | `400` | `{ error: string }` |
+| Auth / unauthorized | `401` / `403` | `{ error: string }` |
+| Supabase `PGRST116` (no rows) | `404` | `{ error: 'Not found' }` |
+| Unexpected Supabase error | `500` | `{ error: error.message }` |
+
+Always return `{ error: string }` — never expose raw stack traces.
+
+## Types
+
+- Request body shapes belong in `api/src/types.ts`.
+- Do not duplicate types that already exist in `types.ts`; import them.
+- Align string-union status values (`'todo' | 'doing' | 'done'`) with the Angular model to avoid drift.
+
+## Environment
+
+- Load env from `api/.env` (dev) or the workspace root `.env`. Logic is in `supabase.ts` — do not add extra `dotenv` calls elsewhere.
+- Required env vars: `SUPABASE_URL`, `SUPABASE_KEY` (service role), `SUPABASE_ANON_KEY`, `ADMIN_EMAIL`.
+
+## CORS & Middleware
+
+- CORS is configured in `main.ts` to allow `http://localhost:4200` only. Update `origin` for production deployments.
+- Add new global middleware in `main.ts` before route registration.

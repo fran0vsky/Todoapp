@@ -1,0 +1,90 @@
+---
+description: E2E testing conventions using Playwright in the todo-e2e Nx project
+globs: todo-e2e/**/*.ts
+alwaysApply: false
+---
+
+# Testing
+
+E2E only — **Playwright** via `@nx/playwright`. No unit test suite currently exists.
+
+## Running Tests
+
+```bash
+# Full suite (requires todo-e2e/.env with E2E_EMAIL and E2E_PASSWORD)
+npx nx run todo-e2e:e2e
+
+# Public (unauthenticated) flows only
+npx nx run todo-e2e:e2e -- --project=chromium-public
+```
+
+Both dev servers (`nx run api:serve` + `nx run todo:serve`) are started automatically by the Playwright config. Set `reuseExistingServer: true` is active — already-running servers are reused.
+
+## File Structure
+
+```
+todo-e2e/src/
+  auth.setup.ts     ← global auth setup; saves session to .auth/user.json
+  app.spec.ts       ← authenticated flows (depends on auth setup)
+  public.spec.ts    ← unauthenticated flows (no storage state)
+  helpers.ts        ← shared page helpers and selectors
+```
+
+- Spec files: `*.spec.ts`
+- Auth setup: `auth.setup.ts` (matched via `testMatch`, not a spec)
+- New helpers go in `helpers.ts` — do not duplicate selector logic across spec files.
+
+## Auth
+
+- Auth setup reads `E2E_EMAIL` / `E2E_PASSWORD` from `todo-e2e/.env` (or workspace `.env`).
+- Authenticated specs depend on the `setup` project and use `storageState: 'todo-e2e/.auth/user.json'`.
+- Never hard-code credentials in spec files.
+
+## What to Test
+
+| Area | Scope |
+|---|---|
+| Routing / guards | Redirects (e.g. `/` → `/login` without session) |
+| Projects | Create, list, open (URL + heading check) |
+| Tasks | Full CRUD: add, edit, move status, archive, restore, delete |
+| New features | Add a `test.describe` block in `app.spec.ts` (auth) or `public.spec.ts` (public) |
+
+After every new feature or change, add or update the relevant spec.
+
+## Selectors — Priority Order
+
+1. **Role + name:** `page.getByRole('button', { name: 'Add Task' })`
+2. **Placeholder / label:** `page.getByPlaceholder('Task title')`
+3. **Text:** `page.getByText('...')`
+4. **`data-testid`** as last resort — add the attribute to the template if needed
+
+Do **not** use CSS class selectors (Tailwind classes are refactor targets, not stable selectors).
+
+## Helper Pattern
+
+```typescript
+// helpers.ts — export reusable waits and locators
+export async function waitForBoardLoaded(page: Page) {
+  await expect(page.getByText('Loading tasks…')).toBeHidden();
+}
+
+export function taskCardInColumn(page: Page, column: string, title: string) {
+  return page.getByRole('region', { name: column }).getByText(title);
+}
+```
+
+## Test Structure
+
+```typescript
+test.describe('tasks', () => {
+  test('should add a task', async ({ page }) => {
+    await createProjectAndOpenBoard(page, 'My Project');
+    // ... actions
+    await expect(taskCardInColumn(page, 'To do', 'My Task')).toBeVisible();
+  });
+});
+```
+
+- One `test.describe` per feature area.
+- Tests must be **independent** — each test sets up its own state via helpers.
+- Use `expect(...).toBeVisible()` / `toBeHidden()` / `toHaveURL()` for assertions.

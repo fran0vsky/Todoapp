@@ -1,0 +1,85 @@
+---
+description: Supabase database conventions — tables, columns, query patterns
+globs: api/**/*.ts
+alwaysApply: false
+---
+
+# Database
+
+All persistence is **Supabase (PostgREST)** via `@supabase/supabase-js`. The API uses a **service-role** client (`api/src/supabase.ts`) — RLS is bypassed server-side.
+
+## Tables
+
+| Table | Key columns |
+|---|---|
+| `projects` | `id`, `title`, `created_at` |
+| `tasks` | `id`, `title`, `description`, `status`, `estimate`, `assignee_email`, `project_id`, `archived`, `created_at` |
+
+## Naming Conventions
+
+- **Column names:** `snake_case` (e.g. `project_id`, `created_at`, `assignee_email`).
+- **New tables:** follow the same `snake_case` convention; add `id` (uuid) and `created_at` (timestamptz) on every table.
+
+## Query Patterns
+
+Always use the shared client — never instantiate a new one:
+
+```typescript
+import { supabase } from '../supabase';
+```
+
+**Select with explicit columns** (prefer over `*` for performance):
+```typescript
+supabase.from('tasks').select('id, title, status, project_id').eq('archived', false)
+```
+
+**Single row:**
+```typescript
+supabase.from('projects').select('*').eq('id', id).single()
+// Use .maybeSingle() when "not found" is a valid non-error case
+```
+
+**Insert and return the created row:**
+```typescript
+supabase.from('tasks').insert({ title, status, project_id }).select('*').single()
+```
+
+**Update and return:**
+```typescript
+supabase.from('tasks').update(updates).eq('id', id).select('*').single()
+```
+
+**Ordered list:**
+```typescript
+supabase.from('tasks').select('*').eq('project_id', id).order('created_at', { ascending: true })
+```
+
+**Cascading delete (manual — no DB-level cascade configured):**
+```typescript
+await supabase.from('tasks').delete().eq('project_id', projectId);
+await supabase.from('projects').delete().eq('id', projectId);
+```
+
+## Return Values
+
+- All service functions return the raw `{ data, error }` tuple from Supabase.
+- Let the controller inspect `error` and set the HTTP status — never throw from a service.
+- Map PostgREST `PGRST116` (no rows matched) to a `404` in the controller.
+
+## Validation (domain, not DB)
+
+Validation helpers live in `api/src/services/validation.ts`:
+
+| Helper | Rule |
+|---|---|
+| `isTaskStatus(s)` | `'todo' \| 'doing' \| 'done'` |
+| `parseEstimate(n)` | Fibonacci: `1, 2, 3, 5, 8` only |
+| `isSimpleEmail(s)` | Basic email format check |
+
+Always validate before inserting/updating — never rely on DB constraints alone.
+
+## Auth Queries
+
+- `supabase.auth.getUser(token)` — validate a Bearer JWT server-side.
+- `supabase.auth.admin.listUsers()` — requires service-role key; used for user picker.
+- These are **not** table queries; handle their errors separately from PostgREST errors.

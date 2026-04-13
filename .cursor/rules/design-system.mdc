@@ -1,0 +1,70 @@
+---
+description: UI design system conventions for the todo app (Tailwind palette, spacing, motion)
+globs: todo/**/*.ts,todo/**/*.html
+alwaysApply: false
+---
+
+# Design System
+
+The app is **dark-by-default** (not a togglable theme). Styling is **Tailwind v3** with default tokens — no custom palette in `tailwind.config.js`. All design tokens are expressed as utility classes in templates.
+
+## Color Palette
+
+| Role | Tokens |
+|---|---|
+| **Background / shell** | `bg-black`, `bg-neutral-950`, `bg-neutral-900` |
+| **Cards / surfaces** | `bg-neutral-800`, `bg-neutral-900` |
+| **Borders** | `border-neutral-800`, `border-neutral-700` |
+| **Muted text** | `text-neutral-400`, `text-neutral-500` |
+| **Body text** | `text-neutral-200`, `text-neutral-100`, `text-white` |
+| **Primary accent** | `purple-500` / `purple-400` — buttons, rings, board chrome |
+| **Primary muted** | `purple-900/15`, `purple-500/20` — hover backgrounds |
+| **Assign / info** | `cyan-*` |
+| **Archive / warning** | `amber-*` |
+| **Destructive** | `red-*` |
+
+**Focus rings:** `focus:ring-2 focus:ring-purple-400` (or `/30`–`/50` variants for subtlety).
+
+## Spacing & Layout
+
+- **Gaps:** `gap-2`, `gap-3`, `gap-4`, `gap-8`; lists use `space-y-2` / `space-y-3`.
+- **Padding:** inputs `px-3 py-2.5`; sections `p-4`–`p-8`; section rhythm `mb-4`, `mb-6`, `mb-8`.
+- **Border radius:** `rounded-lg` / `rounded-xl` for cards and modals; `rounded-md` for chips and badges.
+- **Max width:** content `max-w-[960px]`, wide boards `max-w-[1600px]`, modals `max-w-2xl` / `max-w-md`.
+- **Scrollable flex regions:** always pair `flex-1 min-h-0` on the scroll container — without `min-h-0`, flex children will not scroll inside a flex column.
+
+```html
+<!-- ✅ Correct scroll region -->
+<div class="flex flex-col flex-1 min-h-0 overflow-y-auto scrollbar-dark">
+```
+
+## Custom Utilities
+
+- **`.scrollbar-dark`** (defined in `styles.css`) — apply to any scrollable column or panel. Do not replicate inline.
+
+## Typography
+
+- No custom font loaded; uses Tailwind's default sans stack.
+- Weights: `font-medium`, `font-semibold`, `font-bold`.
+- Sizes: `text-xs` → `text-2xl`; use arbitrary `text-[0.9375rem]` only when standard steps don't fit.
+- `tracking-tight` for headings; `tracking-wide uppercase` for labels / column headers; `tabular-nums` for numeric values.
+
+## Motion
+
+- Loading spinners: `animate-spin` on a bordered `<div>` with accent `border-t-*`.
+- Hover: `transition-colors`, `transition-all`, `hover:border-*`, `hover:shadow-md`.
+- Expanding panels (archive rail): `transition-[width] duration-200 ease-out` via computed class.
+- Keep animations subtle — no dramatic keyframe animations unless specifically designed.
+
+## Component Patterns
+
+- **Buttons:** primary = `bg-purple-500 hover:bg-purple-400 text-white`; ghost = `text-neutral-400 hover:text-white hover:bg-neutral-800`.
+- **Inputs:** `bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2.5 focus:ring-2 focus:ring-purple-400 focus:outline-none`.
+- **Cards:** `bg-neutral-900 border border-neutral-800 rounded-xl p-4`.
+- **Modals:** centered, `max-w-2xl`, `bg-neutral-900 rounded-xl border border-neutral-800`.
+
+## Rules
+
+- Do **not** extend `tailwind.config.js` with one-off custom values — use Tailwind's default scale or arbitrary values in markup.
+- Do **not** add a `dark:` prefix — the app is always dark.
+- Do **not** use `ngClass` or `ngStyle`. Use `[class]` / `[style]` bindings or `host` metadata.

@@ -1,0 +1,92 @@
+---
+description: Project-specific Angular 21 architecture for the todo app (complements angular-style-guide)
+globs: todo/**/*.ts,todo/**/*.html
+alwaysApply: false
+---
+
+# Angular Guide
+
+Angular 21, **standalone** (no NgModules), **zoneless**, **signals-first**. This file covers project architecture. For code style rules (forms, bindings, pipes, TypeScript strictness) see `angular-style-guide.mdc`.
+
+## Bootstrap & DI
+
+- Bootstrapped via `bootstrapApplication(App, appConfig)` in `main.ts`.
+- Always use `inject()` — never constructor parameters.
+- Services use `providedIn: 'root'` (singleton).
+
+## Standalone Components
+
+- Do **NOT** set `standalone: true` in `@Component` — it is the default in Angular 21.
+- Do **NOT** add `changeDetection` to `@Component` — OnPush is the default.
+
+## Zoneless Change Detection
+
+- `provideZonelessChangeDetection()` is active; Zone.js is absent.
+- **Do not use the `async` pipe** — it relies on Zone.js to trigger CD. Convert observables to signals with `toSignal()` at the service or component boundary instead.
+- When wrapping third-party async callbacks (e.g. Supabase `onAuthStateChange`), call `NgZone.run()` to schedule updates.
+
+```typescript
+// ✅ GOOD — zoneless safe
+readonly tasks = toSignal(this.taskApi.getAll(), { initialValue: [] });
+
+// ❌ BAD — async pipe does not trigger CD without Zone.js
+// <li *ngFor="let t of tasks$ | async">
+```
+
+## State Management
+
+- Use `signal()` for mutable state, `computed()` for derived values, `effect()` sparingly.
+- `TaskStateService` is the canonical pattern: private `signal(initialState)` + public `computed()` selectors.
+- RxJS only for HTTP streams and complex async coordination (`switchMap`, `takeUntil`).
+- Use `toSignal()` to bridge HTTP Observables into templates — do not `.set()` inside subscribe blocks.
+
+```typescript
+// ✅ GOOD
+readonly #state = signal<TaskState>(initialState);
+readonly tasks = computed(() => this.#state().tasks);
+
+// ❌ BAD
+tasks$ = new BehaviorSubject<Task[]>([]);
+```
+
+## Component Architecture
+
+- **Smart / presentational split:** smart components inject services; presentational components receive `input()` and emit `output()`.
+- Use `host` metadata for root element classes — no extra wrapping `<div>`.
+- Use `input()` and `output()` signal-based functions, not `@Input()` / `@Output()` decorators.
+
+```typescript
+// ✅ GOOD
+readonly title = input.required<string>();
+readonly saved = output<Task>();
+
+// ❌ BAD
+@Input() title!: string;
+@Output() saved = new EventEmitter<Task>();
+```
+
+## HTTP & API Layer
+
+- All REST calls go through `*ApiService` classes using `HttpClient` — never `fetch()`.
+- Base URL lives in `todo/src/app/shared/api-base.ts`; import `API_BASE_URL` from there.
+- API services return `Observable<T>`; state services or components convert to signals via `toSignal()`.
+
+## Routing
+
+- Routes defined in `app.routes.ts`; all protected routes use `authGuard`.
+- Always use `loadComponent` for feature routes (lazy loading).
+
+```typescript
+// ✅ GOOD
+{ path: 'settings', loadComponent: () => import('./settings/settings.component').then(m => m.SettingsComponent) }
+```
+
+## Models
+
+- Shared interfaces in `todo/src/app/models/`. Do not duplicate types that already exist there.
+- Prefer `interface` for object shapes, `type` for unions and utility types.
+
+## Styling
+
+- Tailwind CSS only — no component `styles` arrays. See `design-system.mdc` for palette and conventions.
+- Global custom utilities go in `todo/src/styles.css`.
