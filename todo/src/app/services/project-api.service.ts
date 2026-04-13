@@ -2,8 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, from, throwError } from 'rxjs';
 import { switchMap } from 'rxjs/operators';
-import { Project } from './project.model';
-import { API_BASE_URL } from './api-base';
+import { Project } from '../models/project.model';
+import { API_BASE_URL } from '../shared/api-base';
 import { getSupabase } from './supabase.client';
 
 export interface CreateProjectDto {

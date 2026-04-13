@@ -1,9 +1,9 @@
 import { Route } from '@angular/router';
-import { LoginComponent } from './login.component';
-import { RegisterComponent } from './register.component';
-import { HomeComponent } from './home.component';
-import { ProjectsListComponent } from './projects-list.component';
-import { authGuard } from './auth.guard';
+import { LoginComponent } from './components/login.component';
+import { RegisterComponent } from './components/register.component';
+import { HomeComponent } from './components/home.component';
+import { ProjectsListComponent } from './components/projects-list.component';
+import { authGuard } from './guards/auth.guard';
 
 export const appRoutes: Route[] = [
   {

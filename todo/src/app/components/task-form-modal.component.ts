@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { AddEditTaskComponent } from './add-edit-task.component';
-import { TaskStateService } from './task-state.service';
+import { TaskStateService } from '../services/task-state.service';
 
 @Component({
   selector: 'app-task-form-modal',

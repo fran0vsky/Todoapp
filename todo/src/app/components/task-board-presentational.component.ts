@@ -1,6 +1,6 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { SafeHtmlPipe } from './safe-html.pipe';
-import { Task, TaskStatus } from './task.model';
+import { SafeHtmlPipe } from '../pipes/safe-html.pipe';
+import { Task, TaskStatus } from '../models/task.model';
 
 @Component({
   selector: 'app-task-board-presentational',

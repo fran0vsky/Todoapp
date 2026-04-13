@@ -1,8 +1,8 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
-import { AuthService } from './auth.service';
-import { isValidEmailFormat } from './email-validation.util';
+import { AuthService } from '../services/auth.service';
+import { isValidEmailFormat } from '../shared/email-validation.util';
 import {
   hasDigit,
   hasLowercaseLetter,
@@ -10,7 +10,7 @@ import {
   hasSpecialCharacter,
   hasUppercaseLetter,
   isPasswordValidForRegistration,
-} from './password-validation.util';
+} from '../shared/password-validation.util';
 import { finalize } from 'rxjs/operators';
 
 @Component({

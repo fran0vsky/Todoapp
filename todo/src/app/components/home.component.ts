@@ -4,10 +4,10 @@ import { EMPTY, Subject, switchMap, takeUntil } from 'rxjs';
 import { TaskFormModalComponent } from './task-form-modal.component';
 import { AssignTaskModalComponent } from './assign-task-modal.component';
 import { TaskBoardSmartComponent } from './task-board-smart.component';
-import { TaskStateService } from './task-state.service';
+import { TaskStateService } from '../services/task-state.service';
 import { HomeNavbarComponent } from './home-navbar.component';
-import { ProjectApiService } from './project-api.service';
-import { SafeHtmlPipe } from './safe-html.pipe';
+import { ProjectApiService } from '../services/project-api.service';
+import { SafeHtmlPipe } from '../pipes/safe-html.pipe';
 
 @Component({
   selector: 'app-home',

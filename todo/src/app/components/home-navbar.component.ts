@@ -1,7 +1,7 @@
 import { Component, ElementRef, HostListener, inject, signal } from '@angular/core';
 import { RouterModule } from '@angular/router';
-import { AuthService } from './auth.service';
-import { TaskStateService } from './task-state.service';
+import { AuthService } from '../services/auth.service';
+import { TaskStateService } from '../services/task-state.service';
 
 @Component({
   selector: 'app-home-navbar',

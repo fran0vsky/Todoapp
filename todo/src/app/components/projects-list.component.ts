@@ -2,9 +2,9 @@ import { NgClass } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, inject, OnInit, signal } from '@angular/core';
 import { Router, RouterModule } from '@angular/router';
-import { Project } from './project.model';
-import { ProjectApiService } from './project-api.service';
-import { AuthService } from './auth.service';
+import { Project } from '../models/project.model';
+import { ProjectApiService } from '../services/project-api.service';
+import { AuthService } from '../services/auth.service';
 import { HomeNavbarComponent } from './home-navbar.component';
 
 @Component({

@@ -1,6 +1,6 @@
 import { Component, inject, OnInit } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
-import { TaskStateService } from './task-state.service';
+import { TaskStateService } from '../services/task-state.service';
 
 @Component({
   selector: 'app-assign-task-modal',

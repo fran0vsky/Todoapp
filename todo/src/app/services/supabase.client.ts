@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import { firstValueFrom } from 'rxjs';
-import { API_BASE_URL } from './api-base';
+import { API_BASE_URL } from '../shared/api-base';
 
 let client: SupabaseClient | null = null;
 

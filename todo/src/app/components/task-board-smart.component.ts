@@ -1,6 +1,6 @@
 import { Component, inject } from '@angular/core';
 import { TaskBoardPresentationalComponent } from './task-board-presentational.component';
-import { TaskStateService } from './task-state.service';
+import { TaskStateService } from '../services/task-state.service';
 
 @Component({
   selector: 'app-task-board-smart',

@@ -2,7 +2,7 @@ import { computed, Injectable, inject, NgZone, OnDestroy, signal } from '@angula
 import { from, Observable, Subscription, timer } from 'rxjs';
 import { AuthResponse, User, Session, UserResponse } from '@supabase/supabase-js';
 import { getSupabase } from './supabase.client';
-import { ADMIN_EMAIL } from './admin.config';
+import { ADMIN_EMAIL } from '../shared/admin.config';
 import { map, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 

@@ -16,11 +16,6 @@ if (existsSync(apiEnvPath)) {
 
 const url = process.env['SUPABASE_URL'];
 const key = process.env['SUPABASE_KEY'];
-
-if (!url || !key) {
-  throw new Error(
-    'Missing SUPABASE_URL or SUPABASE_KEY — add them to api/.env (or .env at the repo root).'
-  );
-}
+const anonKey = process.env['SUPABASE_ANON_KEY'];
 
 export const supabase = createClient(url, key);

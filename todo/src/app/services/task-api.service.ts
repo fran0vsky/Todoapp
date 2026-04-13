@@ -2,8 +2,8 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { API_BASE_URL } from './api-base';
-import { Task, TaskStatus } from './task.model';
+import { API_BASE_URL } from '../shared/api-base';
+import { Task, TaskStatus } from '../models/task.model';
 
 export interface AssignableUser {
   email: string;

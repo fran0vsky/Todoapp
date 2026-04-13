@@ -2,9 +2,9 @@ import { HttpErrorResponse } from '@angular/common/http';
 import { computed, inject, Injectable, signal } from '@angular/core';
 import { Observable, of } from 'rxjs';
 import { catchError, finalize, tap } from 'rxjs/operators';
-import { Task, TaskStatus } from './task.model';
+import { Task, TaskStatus } from '../models/task.model';
 import { AssignableUser, TaskApiService } from './task-api.service';
-import { hasTaskDescription } from './task-description.util';
+import { hasTaskDescription } from '../shared/task-description.util';
 
 interface TaskState {
   tasks: Task[];

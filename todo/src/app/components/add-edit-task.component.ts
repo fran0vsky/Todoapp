@@ -12,7 +12,7 @@ import {
   ViewChild,
 } from '@angular/core';
 import { DomSanitizer } from '@angular/platform-browser';
-import { FIBONACCI_ESTIMATES, TaskStatus } from './task.model';
+import { FIBONACCI_ESTIMATES, TaskStatus } from '../models/task.model';
 
 @Component({
   selector: 'app-add-edit-task',

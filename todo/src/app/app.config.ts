@@ -8,7 +8,7 @@ import {
 import { HttpClient, provideHttpClient } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 import { appRoutes } from './app.routes';
-import { initSupabaseFromApi } from './supabase.client';
+import { initSupabaseFromApi } from './services/supabase.client';
 
 export const appConfig: ApplicationConfig = {
   providers: [
