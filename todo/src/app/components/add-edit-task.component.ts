@@ -17,15 +17,6 @@ import { FIBONACCI_ESTIMATES, TaskStatus } from '../models/task.model';
 @Component({
   selector: 'app-add-edit-task',
   templateUrl: './add-edit-task.component.html',
-  styles: [
-    `
-      .add-edit-rich-editor:empty::before {
-        content: attr(data-placeholder);
-        color: #737373;
-        pointer-events: none;
-      }
-    `,
-  ],
 })
 export class AddEditTaskComponent implements OnChanges, AfterViewInit {
   private readonly sanitizer = inject(DomSanitizer);

@@ -14,14 +14,14 @@
         "index": "todo/src/index.html",
         "main": "todo/src/main.ts",
         "tsConfig": "todo/tsconfig.app.json",
-        "inlineStyleLanguage": "scss",
+        "inlineStyleLanguage": "css",
         "assets": [
           {
             "glob": "**/*",
             "input": "todo/public"
           }
         ],
-        "styles": ["todo/src/styles.scss"]
+        "styles": ["todo/src/styles.css"]
       },
       "configurations": {
         "production": {
