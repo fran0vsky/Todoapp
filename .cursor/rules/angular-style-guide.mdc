@@ -1,7 +1,7 @@
 ---
 description: Angular conventions for the todo app (standalone, signals, templates)
 globs: todo/**/*.ts,todo/**/*.html
-alwaysApply: false
+alwaysApply: true
 ---
 
 ### TypeScript Best Practices

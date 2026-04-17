@@ -4,6 +4,7 @@ import { EMPTY, Subject, switchMap, takeUntil } from 'rxjs';
 import { TaskFormModalComponent } from './task-form-modal.component';
 import { AssignTaskModalComponent } from './assign-task-modal.component';
 import { TaskBoardSmartComponent } from './task-board-smart.component';
+import { VoiceTaskModalComponent } from './voice-task-modal.component';
 import { TaskStateService } from '../services/task-state.service';
 import { HomeNavbarComponent } from './home-navbar.component';
 import { ProjectApiService } from '../services/project-api.service';
@@ -18,6 +19,7 @@ import { SafeHtmlPipe } from '../pipes/safe-html.pipe';
     TaskBoardSmartComponent,
     TaskFormModalComponent,
     AssignTaskModalComponent,
+    VoiceTaskModalComponent,
     SafeHtmlPipe,
   ],
   templateUrl: './home.component.html',
@@ -32,6 +34,8 @@ export class HomeComponent implements OnInit, OnDestroy {
   private readonly projectApi = inject(ProjectApiService);
   private readonly destroy$ = new Subject<void>();
 
+  protected readonly showVoiceModal = signal(false);
+
   /** Right-side archive panel: collapsed shows a narrow rail; expanded shows the list. */
   protected readonly archivePanelExpanded = signal(false);
 
@@ -42,6 +46,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       ? `${base} w-full max-lg:max-h-80 lg:w-80`
       : `${base} lg:w-12 max-lg:h-12 max-lg:w-full`;
   });
+
+  protected openVoiceModal(): void {
+    this.showVoiceModal.set(true);
+  }
 
   protected toggleArchivePanel(): void {
     const next = !this.archivePanelExpanded();

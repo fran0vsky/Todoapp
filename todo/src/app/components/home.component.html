@@ -21,13 +21,26 @@
         <div
           class="flex shrink-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between mb-6"
         >
-          <button
-            type="button"
-            (click)="taskState.openAddForm()"
-            class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow self-start"
-          >
-            Add
-          </button>
+          <div class="flex items-center gap-2 self-start">
+            <button
+              type="button"
+              (click)="taskState.openAddForm()"
+              class="rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm hover:shadow-md transition-shadow"
+            >
+              Add
+            </button>
+            <button
+              type="button"
+              (click)="openVoiceModal()"
+              class="rounded-xl p-3 text-neutral-400 hover:text-purple-300 hover:bg-purple-500/10 border border-neutral-700 hover:border-purple-500/40 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-colors"
+              aria-label="Add task by voice"
+              title="Add task by voice"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 15a5 5 0 005-5V7a5 5 0 00-10 0v3a5 5 0 005 5z" />
+              </svg>
+            </button>
+          </div>
           <div class="flex flex-col gap-2 min-w-0 sm:max-w-md sm:flex-1 sm:justify-end sm:items-end">
             <label for="assignee-filter" class="text-neutral-400 text-xs font-medium uppercase tracking-wide"
               >Filter by assignee</label
@@ -54,6 +67,13 @@
 
         @if (taskState.showAssignModal()) {
           <app-assign-task-modal />
+        }
+
+        @if (showVoiceModal()) {
+          <app-voice-task-modal
+            (created)="showVoiceModal.set(false)"
+            (closed)="showVoiceModal.set(false)"
+          />
         }
 
         <app-task-board-smart />

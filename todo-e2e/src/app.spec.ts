@@ -128,3 +128,40 @@ test.describe('tasks', () => {
     await expect(taskCardInColumn(page, 'To be done', title)).toHaveCount(0);
   });
 });
+
+test.describe('voice task', () => {
+  test('mic button is visible on the board toolbar', async ({ page }) => {
+    const projectName = `Voice ${Date.now()}`;
+    await createProjectAndOpenBoard(page, projectName);
+
+    const micBtn = page.getByRole('button', { name: 'Add task by voice' });
+    await expect(micBtn).toBeVisible();
+    await expect(micBtn).toBeEnabled();
+  });
+
+  test('clicking mic button opens the voice task modal', async ({ page, context }) => {
+    // Grant microphone permission so the browser does not show a native prompt.
+    await context.grantPermissions(['microphone']);
+
+    const projectName = `Voice ${Date.now()}`;
+    await createProjectAndOpenBoard(page, projectName);
+
+    await page.getByRole('button', { name: 'Add task by voice' }).click();
+
+    // The modal should appear in recording state with the "Listening…" heading.
+    await expect(page.getByRole('heading', { name: /listening/i })).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('voice modal can be closed with the close button', async ({ page, context }) => {
+    await context.grantPermissions(['microphone']);
+
+    const projectName = `Voice ${Date.now()}`;
+    await createProjectAndOpenBoard(page, projectName);
+
+    await page.getByRole('button', { name: 'Add task by voice' }).click();
+    await expect(page.getByRole('heading', { name: /listening/i })).toBeVisible({ timeout: 5_000 });
+
+    await page.getByRole('button', { name: 'Close' }).click();
+    await expect(page.getByRole('heading', { name: /listening/i })).toBeHidden({ timeout: 5_000 });
+  });
+});

@@ -1,7 +1,7 @@
 ---
 description: UI design system conventions for the todo app (Tailwind palette, spacing, motion)
 globs: todo/**/*.ts,todo/**/*.html
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Design System
@@ -10,18 +10,18 @@ The app is **dark-by-default** (not a togglable theme). Styling is **Tailwind v3
 
 ## Color Palette
 
-| Role | Tokens |
-|---|---|
-| **Background / shell** | `bg-black`, `bg-neutral-950`, `bg-neutral-900` |
-| **Cards / surfaces** | `bg-neutral-800`, `bg-neutral-900` |
-| **Borders** | `border-neutral-800`, `border-neutral-700` |
-| **Muted text** | `text-neutral-400`, `text-neutral-500` |
-| **Body text** | `text-neutral-200`, `text-neutral-100`, `text-white` |
-| **Primary accent** | `purple-500` / `purple-400` — buttons, rings, board chrome |
-| **Primary muted** | `purple-900/15`, `purple-500/20` — hover backgrounds |
-| **Assign / info** | `cyan-*` |
-| **Archive / warning** | `amber-*` |
-| **Destructive** | `red-*` |
+| Role                   | Tokens                                                     |
+| ---------------------- | ---------------------------------------------------------- |
+| **Background / shell** | `bg-black`, `bg-neutral-950`, `bg-neutral-900`             |
+| **Cards / surfaces**   | `bg-neutral-800`, `bg-neutral-900`                         |
+| **Borders**            | `border-neutral-800`, `border-neutral-700`                 |
+| **Muted text**         | `text-neutral-400`, `text-neutral-500`                     |
+| **Body text**          | `text-neutral-200`, `text-neutral-100`, `text-white`       |
+| **Primary accent**     | `purple-500` / `purple-400` — buttons, rings, board chrome |
+| **Primary muted**      | `purple-900/15`, `purple-500/20` — hover backgrounds       |
+| **Assign / info**      | `cyan-*`                                                   |
+| **Archive / warning**  | `amber-*`                                                  |
+| **Destructive**        | `red-*`                                                    |
 
 **Focus rings:** `focus:ring-2 focus:ring-purple-400` (or `/30`–`/50` variants for subtlety).
 
@@ -35,7 +35,7 @@ The app is **dark-by-default** (not a togglable theme). Styling is **Tailwind v3
 
 ```html
 <!-- ✅ Correct scroll region -->
-<div class="flex flex-col flex-1 min-h-0 overflow-y-auto scrollbar-dark">
+<div class="flex flex-col flex-1 min-h-0 overflow-y-auto scrollbar-dark"></div>
 ```
 
 ## Custom Utilities

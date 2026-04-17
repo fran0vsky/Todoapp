@@ -1,0 +1,192 @@
+<div class="fixed inset-0 bg-black/70 flex items-center justify-center p-6 z-50">
+  <div
+    class="relative w-full max-w-2xl rounded-xl bg-neutral-900 border border-neutral-800 p-6 shadow-lg shadow-black/40"
+  >
+    <!-- Close button -->
+    <button
+      type="button"
+      (click)="close()"
+      class="absolute top-3 right-3 rounded-lg p-2 text-neutral-400 hover:text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-300/50"
+      aria-label="Close"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd" />
+      </svg>
+    </button>
+
+    <!-- ── RECORDING ── -->
+    @if (voiceState() === 'recording') {
+      <div class="flex flex-col items-center gap-6 py-4">
+        <div class="flex items-center gap-3">
+          <!-- Pulsing mic icon -->
+          <span class="relative flex h-10 w-10 items-center justify-center">
+            <span class="absolute inline-flex h-full w-full rounded-full bg-purple-500/30 animate-ping"></span>
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400 relative" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 15a5 5 0 005-5V7a5 5 0 00-10 0v3a5 5 0 005 5z" />
+            </svg>
+          </span>
+          <h2 class="text-neutral-200 font-medium text-lg">Listening&hellip;</h2>
+        </div>
+
+        <!-- Live waveform canvas -->
+        <canvas
+          #waveCanvas
+          width="480"
+          height="80"
+          class="w-full max-w-md rounded-lg bg-neutral-800 border border-neutral-700"
+          aria-hidden="true"
+        ></canvas>
+
+        <p class="text-neutral-500 text-sm text-center">
+          Speak your task &mdash; recording stops automatically on silence.
+        </p>
+      </div>
+    }
+
+    <!-- ── PROCESSING ── -->
+    @if (voiceState() === 'processing') {
+      <div class="flex flex-col items-center gap-4 py-8">
+        <span class="inline-block w-10 h-10 border-[3px] border-neutral-600 border-t-purple-400 rounded-full animate-spin"></span>
+        <p class="text-neutral-300 font-medium">Transcribing &amp; processing&hellip;</p>
+        <p class="text-neutral-500 text-sm">AI is converting your speech into a task.</p>
+      </div>
+    }
+
+    <!-- ── PREVIEW ── -->
+    @if (voiceState() === 'preview') {
+      <div class="flex flex-col gap-5">
+        <h2 class="text-neutral-200 font-semibold text-lg pr-8">Review your task</h2>
+
+        <!-- Transcript block -->
+        @if (transcript()) {
+          <div class="rounded-lg bg-neutral-800/70 border border-neutral-700 px-4 py-3">
+            <p class="text-xs text-neutral-500 uppercase tracking-wide font-medium mb-1">What you said</p>
+            <p class="text-neutral-300 text-sm leading-relaxed">{{ transcript() }}</p>
+          </div>
+        }
+
+        <!-- Editable task fields -->
+        <div class="flex flex-col gap-4">
+          <!-- Title -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-title">Title</label>
+            <input
+              id="voice-title"
+              type="text"
+              [value]="parsedTitle()"
+              (input)="parsedTitle.set($any($event.target).value)"
+              placeholder="Task title…"
+              class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2.5 text-neutral-100 placeholder-neutral-500 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none"
+            />
+          </div>
+
+          <!-- Status + Estimate row -->
+          <div class="grid grid-cols-2 gap-3">
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-status">Status</label>
+              <select
+                id="voice-status"
+                [value]="parsedStatus()"
+                (change)="parsedStatus.set($any($event.target).value)"
+                class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2.5 text-neutral-100 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none"
+              >
+                <option [value]="TaskStatus.Todo">To do</option>
+                <option [value]="TaskStatus.Doing">Doing</option>
+                <option [value]="TaskStatus.Done">Done</option>
+              </select>
+            </div>
+
+            <div class="flex flex-col gap-1.5">
+              <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-estimate">Estimate</label>
+              <select
+                id="voice-estimate"
+                [value]="parsedEstimate() ?? ''"
+                (change)="parsedEstimate.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+                class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2.5 text-neutral-100 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none"
+              >
+                <option value="">No estimate</option>
+                @for (n of fibonacciEstimates; track n) {
+                  <option [value]="n">{{ n }} pt{{ n === 1 ? '' : 's' }}</option>
+                }
+              </select>
+            </div>
+          </div>
+
+          <!-- Description -->
+          <div class="flex flex-col gap-1.5">
+            <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-desc">Description</label>
+            <textarea
+              id="voice-desc"
+              rows="3"
+              [value]="parsedDescription()"
+              (input)="parsedDescription.set($any($event.target).value)"
+              placeholder="Additional details…"
+              class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2.5 text-neutral-100 placeholder-neutral-500 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none resize-none"
+            ></textarea>
+          </div>
+        </div>
+
+        @if (submitError()) {
+          <p class="text-red-400 text-sm" role="alert">{{ submitError() }}</p>
+        }
+
+        <!-- Actions -->
+        <div class="flex items-center justify-end gap-3 pt-1">
+          <button
+            type="button"
+            (click)="close()"
+            class="rounded-lg px-4 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-300/50 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            (click)="createTask()"
+            [disabled]="submitting() || !parsedTitle().trim()"
+            class="rounded-xl bg-purple-500 text-white px-5 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            @if (submitting()) {
+              <span class="inline-flex items-center gap-2">
+                <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+                Creating…
+              </span>
+            } @else {
+              Create Task
+            }
+          </button>
+        </div>
+      </div>
+    }
+
+    <!-- ── ERROR ── -->
+    @if (voiceState() === 'error') {
+      <div class="flex flex-col items-center gap-4 py-6">
+        <div class="flex items-center justify-center w-12 h-12 rounded-full bg-red-500/15 border border-red-500/30">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856C18.448 19 19 18.105 19 17l-7-14c-1-2-3-2-4 0L4 17c0 1.105.552 2 1.144 2z" />
+          </svg>
+        </div>
+        <div class="text-center">
+          <p class="text-red-300 font-medium mb-1">Something went wrong</p>
+          <p class="text-neutral-400 text-sm">{{ errorMessage() }}</p>
+        </div>
+        <div class="flex items-center gap-3">
+          <button
+            type="button"
+            (click)="retry()"
+            class="rounded-xl bg-purple-500 text-white px-5 py-2.5 text-sm font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 transition-colors"
+          >
+            Try again
+          </button>
+          <button
+            type="button"
+            (click)="close()"
+            class="rounded-lg px-4 py-2.5 text-sm text-neutral-400 hover:text-white hover:bg-neutral-800 focus:outline-none focus:ring-2 focus:ring-purple-300/50 transition-colors"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

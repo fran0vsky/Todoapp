@@ -1,7 +1,7 @@
 ---
 description: E2E testing conventions using Playwright in the todo-e2e Nx project
 globs: todo-e2e/**/*.ts
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Testing
@@ -42,12 +42,12 @@ todo-e2e/src/
 
 ## What to Test
 
-| Area | Scope |
-|---|---|
-| Routing / guards | Redirects (e.g. `/` → `/login` without session) |
-| Projects | Create, list, open (URL + heading check) |
-| Tasks | Full CRUD: add, edit, move status, archive, restore, delete |
-| New features | Add a `test.describe` block in `app.spec.ts` (auth) or `public.spec.ts` (public) |
+| Area             | Scope                                                                            |
+| ---------------- | -------------------------------------------------------------------------------- |
+| Routing / guards | Redirects (e.g. `/` → `/login` without session)                                  |
+| Projects         | Create, list, open (URL + heading check)                                         |
+| Tasks            | Full CRUD: add, edit, move status, archive, restore, delete                      |
+| New features     | Add a `test.describe` block in `app.spec.ts` (auth) or `public.spec.ts` (public) |
 
 After every new feature or change, add or update the relevant spec.
 

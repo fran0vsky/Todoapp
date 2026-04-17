@@ -196,6 +196,11 @@ export class TaskStateService {
     }));
   }
 
+  /** Append a task that was created externally (e.g. via voice) to the local board. */
+  addTaskLocally(task: Task): void {
+    this.state.update((s) => ({ ...s, tasks: [...s.tasks, task] }));
+  }
+
   /** Call when leaving the board (e.g. navigate to project list). */
   clearProjectContext(): void {
     this.assigneeFilterSig.set('all');

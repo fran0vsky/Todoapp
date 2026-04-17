@@ -1,7 +1,7 @@
 ---
 description: Project-specific Angular 21 architecture for the todo app (complements angular-style-guide)
 globs: todo/**/*.ts,todo/**/*.html
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Angular Guide

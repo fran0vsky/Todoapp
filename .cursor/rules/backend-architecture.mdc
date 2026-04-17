@@ -1,7 +1,7 @@
 ---
 description: Backend architecture and coding standards for the Express + Supabase API
 globs: api/**/*.ts
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Backend Architecture
@@ -61,7 +61,11 @@ export const createTask: RequestHandler = async (req, res) => {
 ```typescript
 // ✅ GOOD
 export const getTasksByProject = (projectId: string) =>
-  supabase.from('tasks').select('*').eq('project_id', projectId).eq('archived', false);
+  supabase
+    .from('tasks')
+    .select('*')
+    .eq('project_id', projectId)
+    .eq('archived', false);
 ```
 
 ## Auth & Authorization
@@ -73,17 +77,18 @@ export const getTasksByProject = (projectId: string) =>
 ```typescript
 // ✅ Admin guard pattern
 const user = await getUserFromBearer(req);
-if (!user || !isAdmin(user)) return res.status(403).json({ error: 'Forbidden' });
+if (!user || !isAdmin(user))
+  return res.status(403).json({ error: 'Forbidden' });
 ```
 
 ## Error Handling
 
-| Scenario | Status | Body shape |
-|---|---|---|
-| Missing / invalid input | `400` | `{ error: string }` |
-| Auth / unauthorized | `401` / `403` | `{ error: string }` |
-| Supabase `PGRST116` (no rows) | `404` | `{ error: 'Not found' }` |
-| Unexpected Supabase error | `500` | `{ error: error.message }` |
+| Scenario                      | Status        | Body shape                 |
+| ----------------------------- | ------------- | -------------------------- |
+| Missing / invalid input       | `400`         | `{ error: string }`        |
+| Auth / unauthorized           | `401` / `403` | `{ error: string }`        |
+| Supabase `PGRST116` (no rows) | `404`         | `{ error: 'Not found' }`   |
+| Unexpected Supabase error     | `500`         | `{ error: error.message }` |
 
 Always return `{ error: string }` — never expose raw stack traces.
 

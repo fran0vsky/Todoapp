@@ -1,7 +1,7 @@
 ---
 description: Supabase database conventions — tables, columns, query patterns
 globs: api/**/*.ts
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Database
