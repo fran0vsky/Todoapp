@@ -100,6 +100,18 @@ test.describe('tasks', () => {
     await expect(taskCardInColumn(page, 'Done', title)).toBeVisible();
   });
 
+  test('exposes a dictation microphone button in the add task form', async ({ page }) => {
+    const projectName = `P ${Date.now()}`;
+    await createProjectAndOpenBoard(page, projectName);
+
+    await openAddTaskModal(page);
+    // Button is rendered in the idle state with this aria-label; transcription itself is not
+    // driven end-to-end here because it requires a real microphone + model weights.
+    const micButton = page.getByRole('button', { name: 'Dictate description' });
+    await expect(micButton).toBeVisible();
+    await expect(micButton).toBeEnabled();
+  });
+
   test('deletes a task from the board', async ({ page }) => {
     const projectName = `P ${Date.now()}`;
     await createProjectAndOpenBoard(page, projectName);
