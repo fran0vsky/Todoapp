@@ -1,7 +1,7 @@
 {
   "name": "todoapp",
   "version": "1.0.0",
-  "description": "��#\u0000 \u0000T\u0000o\u0000d\u0000o\u0000a\u0000p\u0000p\u0000\r\u0000 \u0000",
+  "description": "Nx monorepo: Angular todo app, Express API, Supabase, Playwright E2E, voice tasks via OpenRouter/OpenAI.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,9 +10,17 @@
     "type": "git",
     "url": "git+https://github.com/fran0vsky/Todoapp.git"
   },
-  "keywords": [],
+  "keywords": [
+    "angular",
+    "nx",
+    "express",
+    "supabase",
+    "playwright",
+    "typescript",
+    "todo"
+  ],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "type": "commonjs",
   "bugs": {
     "url": "https://github.com/fran0vsky/Todoapp/issues"

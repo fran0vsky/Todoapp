@@ -18,7 +18,7 @@ import {
   postTask,
 } from './controllers/tasks.controller';
 import { getUsers } from './controllers/users.controller';
-import { audioUpload, postVoiceProcess } from './controllers/voice.controller';
+import { audioUpload, postVoiceLog, postVoiceProcess } from './controllers/voice.controller';
 
 const app = express();
 const port = process.env['PORT'] ?? 3333;
@@ -65,6 +65,7 @@ app.delete('/api/tasks/:id', deleteTask);
 // ---------- VOICE ----------
 
 app.post('/api/voice/process', audioUpload.single('audio'), postVoiceProcess);
+app.post('/api/voice/log', postVoiceLog);
 
 app.listen(port, () => {
   console.log(`API running at http://localhost:${port}`);

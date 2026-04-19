@@ -16,29 +16,31 @@
 
     <!-- ── RECORDING ── -->
     @if (voiceState() === 'recording') {
-      <div class="flex flex-col items-center gap-6 py-4">
-        <div class="flex items-center gap-3">
+      <div class="flex flex-col items-center gap-6 py-4 w-full">
+        <div class="flex items-center justify-center gap-3 w-full">
           <!-- Pulsing mic icon -->
-          <span class="relative flex h-10 w-10 items-center justify-center">
+          <span class="relative flex h-10 w-10 shrink-0 items-center justify-center">
             <span class="absolute inline-flex h-full w-full rounded-full bg-purple-500/30 animate-ping"></span>
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-400 relative" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 15a5 5 0 005-5V7a5 5 0 00-10 0v3a5 5 0 005 5z" />
             </svg>
           </span>
-          <h2 class="text-neutral-200 font-medium text-lg">Listening&hellip;</h2>
+          <h2 class="text-neutral-200 font-medium text-lg text-center">Listening&hellip;</h2>
         </div>
 
-        <!-- Live waveform canvas -->
-        <canvas
-          #waveCanvas
-          width="480"
-          height="80"
-          class="w-full max-w-md rounded-lg bg-neutral-800 border border-neutral-700"
-          aria-hidden="true"
-        ></canvas>
+        <!-- Live waveform: centered equalizer -->
+        <div class="w-full max-w-xl mx-auto flex justify-center px-1">
+          <canvas
+            #waveCanvas
+            width="560"
+            height="88"
+            class="w-full max-w-xl h-[88px] rounded-lg bg-neutral-800 border border-neutral-700"
+            aria-hidden="true"
+          ></canvas>
+        </div>
 
         <p class="text-neutral-500 text-sm text-center">
-          Speak your task &mdash; recording stops automatically on silence.
+          Speak your task when ready &mdash; the first few seconds stay open, then a pause ends recording.
         </p>
       </div>
     }
@@ -52,22 +54,21 @@
       </div>
     }
 
-    <!-- ── PREVIEW ── -->
-    @if (voiceState() === 'preview') {
+    <!-- ── Direct edit (no confirm / preview step) ── -->
+    @if (showVoiceEditForm()) {
       <div class="flex flex-col gap-5">
-        <h2 class="text-neutral-200 font-semibold text-lg pr-8">Review your task</h2>
+        <h2 class="text-neutral-200 font-semibold text-lg pr-8">Task from voice</h2>
+        <p class="text-neutral-500 text-sm -mt-2">
+          Adjust anything below, then add the task &mdash; or cancel if you changed your mind.
+        </p>
 
-        <!-- Transcript block -->
-        @if (transcript()) {
-          <div class="rounded-lg bg-neutral-800/70 border border-neutral-700 px-4 py-3">
-            <p class="text-xs text-neutral-500 uppercase tracking-wide font-medium mb-1">What you said</p>
-            <p class="text-neutral-300 text-sm leading-relaxed">{{ transcript() }}</p>
-          </div>
+        @if (wipLimitHint()) {
+          <p class="text-amber-200/90 text-sm rounded-lg bg-amber-500/10 border border-amber-500/25 px-3 py-2" role="status">
+            {{ wipLimitHint() }}
+          </p>
         }
 
-        <!-- Editable task fields -->
         <div class="flex flex-col gap-4">
-          <!-- Title -->
           <div class="flex flex-col gap-1.5">
             <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-title">Title</label>
             <input
@@ -80,19 +81,20 @@
             />
           </div>
 
-          <!-- Status + Estimate row -->
           <div class="grid grid-cols-2 gap-3">
             <div class="flex flex-col gap-1.5">
               <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-status">Status</label>
               <select
                 id="voice-status"
-                [value]="parsedStatus()"
-                (change)="parsedStatus.set($any($event.target).value)"
+                [ngModel]="parsedStatus()"
+                (ngModelChange)="parsedStatus.set($event)"
+                [ngModelOptions]="{ standalone: true }"
                 class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2.5 text-neutral-100 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none"
+                aria-label="Task status"
               >
-                <option [value]="TaskStatus.Todo">To do</option>
-                <option [value]="TaskStatus.Doing">Doing</option>
-                <option [value]="TaskStatus.Done">Done</option>
+                <option [ngValue]="TaskStatus.Todo">To do</option>
+                <option [ngValue]="TaskStatus.Doing" [disabled]="taskState.workInProgressFull()">Doing</option>
+                <option [ngValue]="TaskStatus.Done">Done</option>
               </select>
             </div>
 
@@ -100,19 +102,25 @@
               <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-estimate">Estimate</label>
               <select
                 id="voice-estimate"
-                [value]="parsedEstimate() ?? ''"
-                (change)="parsedEstimate.set($any($event.target).value === '' ? null : +$any($event.target).value)"
+                [ngModel]="parsedEstimate()"
+                (ngModelChange)="parsedEstimate.set($event)"
+                [ngModelOptions]="{ standalone: true }"
                 class="bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2.5 text-neutral-100 text-sm focus:ring-2 focus:ring-purple-400 focus:outline-none"
               >
-                <option value="">No estimate</option>
+                <option [ngValue]="null">No estimate</option>
                 @for (n of fibonacciEstimates; track n) {
-                  <option [value]="n">{{ n }} pt{{ n === 1 ? '' : 's' }}</option>
+                  <option [ngValue]="n">{{ n }} pt{{ n === 1 ? '' : 's' }}</option>
                 }
               </select>
             </div>
           </div>
 
-          <!-- Description -->
+          @if (taskState.workInProgressFull()) {
+            <p class="text-amber-200/80 text-xs" role="status">
+              Work in progress is full (1 task max). Finish or move the current task to choose Doing.
+            </p>
+          }
+
           <div class="flex flex-col gap-1.5">
             <label class="text-xs text-neutral-400 font-medium uppercase tracking-wide" for="voice-desc">Description</label>
             <textarea
@@ -126,11 +134,17 @@
           </div>
         </div>
 
+        @if (transcript()) {
+          <div class="rounded-lg bg-neutral-800/50 border border-neutral-700/80 px-4 py-3">
+            <p class="text-xs text-neutral-500 uppercase tracking-wide font-medium mb-1">What you said</p>
+            <p class="text-neutral-400 text-sm leading-relaxed">{{ transcript() }}</p>
+          </div>
+        }
+
         @if (submitError()) {
           <p class="text-red-400 text-sm" role="alert">{{ submitError() }}</p>
         }
 
-        <!-- Actions -->
         <div class="flex items-center justify-end gap-3 pt-1">
           <button
             type="button"
@@ -148,10 +162,10 @@
             @if (submitting()) {
               <span class="inline-flex items-center gap-2">
                 <span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                Creating…
+                Adding…
               </span>
             } @else {
-              Create Task
+              Add task
             }
           </button>
         </div>

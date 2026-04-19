@@ -9,6 +9,9 @@ pnpm-debug.log*
 logs/
 *.log
 
+# Voice training data (JSONL)
+*.jsonl
+
 # Runtime data
 pids/
 *.pid

@@ -21,7 +21,8 @@ import { Task } from '../models/task.model';
 @Component({
   selector: 'app-voice-task-modal',
   imports: [FormsModule],
-  templateUrl: './voice-task-modal.component.html',
+  // File name versioned so dev-server cache reliably picks up direct-edit UI.
+  templateUrl: './voice-task-modal.direct-edit.html',
 })
 export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly voiceService = inject(VoiceTaskService);
@@ -39,6 +40,12 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
   protected readonly voiceState = computed(() => this.voiceService.state());
   protected readonly errorMessage = computed(() => this.voiceService.errorMessage());
 
+  /** Direct-edit form: `edit`, or legacy `preview` from cached bundles (same screen). */
+  protected readonly showVoiceEditForm = computed(() => {
+    const s = this.voiceService.state();
+    return s === 'edit' || s === 'preview';
+  });
+
   protected readonly transcript = signal('');
   protected readonly parsedTitle = signal('');
   protected readonly parsedStatus = signal<TaskStatus>(TaskStatus.Todo);
@@ -47,6 +54,9 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
 
   protected readonly submitting = signal(false);
   protected readonly submitError = signal('');
+
+  /** Shown when AI chose Doing but the board already has a WIP task (one-task limit). */
+  protected readonly wipLimitHint = signal<string | null>(null);
 
   private animFrameId: number | null = null;
 
@@ -59,6 +69,13 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
           this.voiceService._pendingBlob = null;
           this.runProcessing(blob);
         }
+      }
+    });
+
+    // Normalize legacy `preview` → `edit` (e.g. mixed cached chunks).
+    effect(() => {
+      if (this.voiceService.state() === 'preview') {
+        this.voiceService.state.set('edit');
       }
     });
   }
@@ -90,12 +107,18 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
     this.parsedEstimate.set(null);
     this.parsedDescription.set('');
     this.submitError.set('');
+    this.wipLimitHint.set(null);
     await this.voiceService.startRecording();
   }
 
   protected createTask(): void {
     const projectId = this.taskState.activeProjectId();
     if (!projectId || !this.parsedTitle().trim()) return;
+
+    if (this.parsedStatus() === TaskStatus.Doing && this.taskState.workInProgressFull()) {
+      this.submitError.set('Work in progress is full — only one task allowed there. Change status or free the column first.');
+      return;
+    }
 
     this.submitting.set(true);
     this.submitError.set('');
@@ -128,15 +151,48 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
       const result: VoiceProcessResult = await this.voiceService.processAudio(blob);
       this.transcript.set(result.transcript);
       this.parsedTitle.set(result.title);
-      this.parsedStatus.set(result.status);
-      this.parsedEstimate.set(result.estimate);
+      this.wipLimitHint.set(null);
+
+      let status = VoiceTaskModalComponent.parseStatus(result.status);
+      if (status === TaskStatus.Doing && this.taskState.workInProgressFull()) {
+        status = TaskStatus.Todo;
+        this.wipLimitHint.set(
+          'AI suggested Work in progress, but that column already has a task. This draft is set to To do — confirm or edit.'
+        );
+      }
+      this.parsedStatus.set(status);
+      this.parsedEstimate.set(VoiceTaskModalComponent.parseEstimate(result.estimate));
       this.parsedDescription.set(result.description);
-      this.voiceService.state.set('preview');
+      this.voiceService.logVoiceData({
+        task: result.transcript,
+        expected: {
+          title: result.title.trim(),
+          description: result.description,
+          status,
+          estimate: result.estimate,
+        },
+      });
+      this.voiceService.state.set('edit');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to process voice';
       this.voiceService.errorMessage.set(msg);
       this.voiceService.state.set('error');
     }
+  }
+
+  private static parseStatus(raw: unknown): TaskStatus {
+    const s = typeof raw === 'string' ? raw.trim().toLowerCase() : raw;
+    if (s === TaskStatus.Todo || s === 'todo') return TaskStatus.Todo;
+    if (s === TaskStatus.Doing || s === 'doing') return TaskStatus.Doing;
+    if (s === TaskStatus.Done || s === 'done') return TaskStatus.Done;
+    return TaskStatus.Todo;
+  }
+
+  private static parseEstimate(raw: unknown): number | null {
+    if (raw === null || raw === undefined || raw === '') return null;
+    const n = typeof raw === 'number' && Number.isFinite(raw) ? raw : Number(raw);
+    if (!Number.isInteger(n) || ![1, 2, 3, 5, 8].includes(n)) return null;
+    return n;
   }
 
   private drawWaveform(): void {
@@ -168,17 +224,25 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
       ctx.clearRect(0, 0, w, h);
 
       const barCount = 48;
-      const step = Math.floor(bufferLength / barCount);
+      const step = Math.max(1, Math.floor(bufferLength / barCount));
       const barW = Math.max(2, Math.floor(w / barCount) - 2);
       const gap = Math.floor((w - barCount * barW) / (barCount + 1));
+      const totalBarStrip = barCount * barW + (barCount + 1) * gap;
+      const startX = (w - totalBarStrip) / 2;
+      const center = (barCount - 1) / 2;
+      const maxDist = Math.max(center, 1e-6);
 
       for (let i = 0; i < barCount; i++) {
-        const value = dataArray[i * step] ?? 0;
-        const barH = Math.max(3, (value / 255) * h * 0.85);
-        const x = gap + i * (barW + gap);
+        const mirrored = Math.min(i, barCount - 1 - i);
+        const bin = Math.min(bufferLength - 1, mirrored * step);
+        const value = dataArray[bin] ?? 0;
+        const dist = Math.abs(i - center);
+        const envelope = Math.cos((dist / maxDist) * (Math.PI / 2)) ** 2;
+        const barH = Math.max(3, (value / 255) * h * 0.85 * envelope);
+        const x = startX + gap + i * (barW + gap);
         const y = (h - barH) / 2;
 
-        const alpha = 0.5 + (value / 255) * 0.5;
+        const alpha = 0.5 + (value / 255) * envelope * 0.5;
         ctx.fillStyle = `rgba(168, 85, 247, ${alpha})`;
         ctx.beginPath();
         ctx.roundRect(x, y, barW, barH, barW / 2);

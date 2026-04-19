@@ -12,12 +12,30 @@ export interface VoiceProcessResult {
   description: string;
 }
 
-export type VoiceRecordingState = 'idle' | 'recording' | 'processing' | 'preview' | 'error';
+export interface VoiceLogPayload {
+  task: string;
+  expected: {
+    title: string;
+    description: string;
+    status: TaskStatus;
+    estimate: number | null;
+  };
+}
+
+/** `preview` is deprecated — same UI as `edit`; kept so old bundles / state still show the form. */
+export type VoiceRecordingState =
+  | 'idle'
+  | 'recording'
+  | 'processing'
+  | 'edit'
+  | 'preview'
+  | 'error';
 
 @Injectable({ providedIn: 'root' })
 export class VoiceTaskService {
   private readonly http = inject(HttpClient);
   private readonly voiceUrl = `${API_BASE_URL}/api/voice/process`;
+  private readonly voiceLogUrl = `${API_BASE_URL}/api/voice/log`;
 
   private mediaRecorder: MediaRecorder | null = null;
   private audioContext: AudioContext | null = null;
@@ -27,9 +45,19 @@ export class VoiceTaskService {
   private chunks: Blob[] = [];
   private onStopCallback: ((blob: Blob) => void) | null = null;
 
+  /** When recording began (for grace period before silence can auto-stop). */
+  private recordingStartedAt = 0;
+  /** True after we detect voice-level audio — avoids stopping while user has not started talking. */
+  private hasHeardSpeech = false;
+
   /** Silence detection thresholds. */
   private readonly SILENCE_THRESHOLD = 0.01;
-  private readonly SILENCE_DURATION_MS = 1500;
+  /** How long quiet must last after speech before auto-stop. */
+  private readonly SILENCE_DURATION_MS = 2200;
+  /** Ignore silence-based auto-stop for this long after mic opens (time to start speaking). */
+  private readonly INITIAL_GRACE_MS = 5000;
+  /** Hard cap so the recorder cannot run forever if the user never speaks. */
+  private readonly MAX_RECORDING_MS = 120_000;
 
   readonly state = signal<VoiceRecordingState>('idle');
   readonly errorMessage = signal<string>('');
@@ -71,6 +99,8 @@ export class VoiceTaskService {
       };
 
       this.mediaRecorder.start(100);
+      this.recordingStartedAt = Date.now();
+      this.hasHeardSpeech = false;
       this.state.set('recording');
       this.startSilenceDetection();
     } catch (err: unknown) {
@@ -121,6 +151,11 @@ export class VoiceTaskService {
     } catch (err: unknown) {
       throw new Error(this.httpErrorToMessage(err));
     }
+  }
+
+  /** Appends one JSONL line when `VOICE_DATA_LOG_PATH` is set on the API (otherwise server no-ops). */
+  logVoiceData(payload: VoiceLogPayload): void {
+    this.http.post(this.voiceLogUrl, payload).subscribe({ error: () => undefined });
   }
 
   cleanup(): void {
@@ -199,10 +234,36 @@ export class VoiceTaskService {
         sumSquares += normalized * normalized;
       }
       const rms = Math.sqrt(sumSquares / bufferLength);
+      const now = Date.now();
+      const elapsed = now - this.recordingStartedAt;
 
-      if (rms < this.SILENCE_THRESHOLD) {
-        if (silenceStart === null) silenceStart = Date.now();
-        else if (Date.now() - silenceStart >= this.SILENCE_DURATION_MS) {
+      if (elapsed >= this.MAX_RECORDING_MS) {
+        this.onSilenceDetected();
+        return;
+      }
+
+      const loudEnough = rms >= this.SILENCE_THRESHOLD;
+      if (loudEnough) {
+        this.hasHeardSpeech = true;
+      }
+
+      // Opening seconds: never treat quiet as "done" — user may still be gathering thoughts.
+      if (elapsed < this.INITIAL_GRACE_MS) {
+        silenceStart = null;
+        requestAnimationFrame(detect);
+        return;
+      }
+
+      // After grace: do not auto-stop on silence until we've heard speech at least once.
+      if (!this.hasHeardSpeech) {
+        silenceStart = null;
+        requestAnimationFrame(detect);
+        return;
+      }
+
+      if (!loudEnough) {
+        if (silenceStart === null) silenceStart = now;
+        else if (now - silenceStart >= this.SILENCE_DURATION_MS) {
           this.onSilenceDetected();
           return;
         }

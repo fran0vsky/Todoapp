@@ -1,7 +1,9 @@
 import type { Request, Response } from 'express';
+import { appendFile, mkdir } from 'fs/promises';
+import path from 'node:path';
 import multer from 'multer';
 import OpenAI from 'openai';
-import { isTaskStatus } from '../services/validation';
+import { isTaskStatus, parseEstimate } from '../services/validation';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 
@@ -264,15 +266,32 @@ async function parseTranscriptToTask(transcript: string): Promise<ParsedTask> {
     },
   });
 
-  const systemPrompt = `You receive a voice transcript of someone describing a task. 
-Extract the following fields and respond ONLY with valid JSON, no explanation:
-- title: short imperative sentence summarising the task (required, max 80 chars)
-- status: one of "todo", "doing", "done" — default "todo" unless the speaker clearly says the task is in progress or already done
-- estimate: a Fibonacci number (1, 2, 3, 5, or 8) representing story points, or null if not mentioned
-- description: any remaining detail as plain text; empty string if none
+  const systemPrompt = `You are a software project manager receiving a voice note from a developer.
+Your job is NOT to transcribe — it IS to produce a well-formed task card from what they said.
 
-Example output:
-{"title":"Set up CI pipeline","status":"todo","estimate":3,"description":"Use GitHub Actions with Node 20 and run tests on every pull request."}`;
+Respond ONLY with valid JSON, no markdown, no explanation. Shape:
+{"title":"...","status":"todo"|"doing"|"done","estimate":1|2|3|5|8|null,"description":"..."}
+
+Rules:
+- title: imperative phrase, max 60 characters, no filler ("so I need to", "basically", "um"). Name the outcome, not the ramble.
+- description: 1–3 short sentences: context, scope, and acceptance-style detail. Write what must be done in clear technical language — not a verbatim quote of the voice note. Use empty string "" only if there is truly nothing beyond the title.
+- status: "todo" | "doing" | "done" — infer carefully from how the speaker frames the work:
+  Use "doing" when they signal active work on this item, including phrases like: "I'm working on", "I'm currently working on", "currently developing", "I'm building", "already started", "already working on this", "in progress", "actively developing", "halfway through", "midway", "started on", "deep into", "still implementing" — even if they also describe what the thing is (e.g. "create a task for the weather app I'm currently working on" → status "doing" because they are actively on it).
+  Use "done" when the work is finished or they treat it as complete — not only past tense but also "already": "finished", "done with", "completed", "shipped", "wrapped up", "merged", "landed", "it's live", "already done", "already complete", "already finished", "already created", "already built", "already implemented", "that's done", "this is complete", "nothing left to do", "checked in", "deployed", "released". If they ask to log or record something they already finished, use "done" so it belongs in the Done column.
+  If both "still working" and "done" cues appear, prefer the clearest recent intent; when unclear, default "todo".
+  Default "todo" only when it sounds like a new/backlog item with no active-work or completion language.
+- estimate: Fibonacci story points 1, 2, 3, 5, or 8 from apparent complexity (always pick one number; avoid null unless the transcript is empty of substance):
+  1 = trivial (rename, toggle, copy-paste)
+  2 = small (single file, obvious fix)
+  3 = medium (several files, some thinking) — default when unclear
+  5 = large (cross-cutting, integration, unclear edges)
+  8 = very large (multi-day, migration, heavy unknowns)
+  Use cues: "quick/simple/trivial" → lower; "refactor/migrate/investigate/architecture" → higher.
+
+Examples:
+{"title":"Add GitHub Actions CI for PR tests","status":"todo","estimate":3,"description":"Wire Node 20 in Actions. Run the test suite on every pull request. Fail the job on test or lint errors."}
+{"title":"Build weather app MVP","status":"doing","estimate":5,"description":"User is actively developing the weather app. Capture remaining feature work and polish before release."}
+{"title":"Document login API in README","status":"done","estimate":2,"description":"Speaker reports this is already written and merged. Task records completed documentation work for the login endpoints."}`;
 
   const response = await client.chat.completions.create({
     model: 'anthropic/claude-sonnet-4-5',
@@ -281,7 +300,7 @@ Example output:
       { role: 'user', content: transcript },
     ],
     response_format: { type: 'json_object' },
-    temperature: 0.2,
+    temperature: 0.4,
   });
 
   let raw = response.choices[0]?.message?.content ?? '{}';
@@ -300,8 +319,11 @@ Example output:
   const status = isTaskStatus(rawStatus) ? rawStatus : 'todo';
   const rawEst = parsed['estimate'];
   const validEstimates = [1, 2, 3, 5, 8];
-  const estimate =
+  let estimate =
     typeof rawEst === 'number' && validEstimates.includes(rawEst) ? rawEst : null;
+  if (estimate === null && title) {
+    estimate = 3;
+  }
   const description =
     typeof parsed['description'] === 'string' ? parsed['description'].trim() : '';
 
@@ -334,5 +356,71 @@ export async function postVoiceProcess(req: Request, res: Response): Promise<voi
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Voice processing failed';
     res.status(500).json({ error: clipErrorForClient(message) });
+  }
+}
+
+export async function postVoiceLog(req: Request, res: Response): Promise<void> {
+  const logPath = process.env['VOICE_DATA_LOG_PATH']?.trim();
+  if (!logPath) {
+    res.status(204).send();
+    return;
+  }
+
+  const raw = req.body;
+  if (!raw || typeof raw !== 'object') {
+    res.status(400).json({ error: 'Invalid JSON body' });
+    return;
+  }
+
+  const task = (raw as { task?: unknown }).task;
+  if (typeof task !== 'string' || !task.trim()) {
+    res.status(400).json({ error: 'task is required' });
+    return;
+  }
+
+  const expectedRaw = (raw as { expected?: unknown }).expected;
+  if (!expectedRaw || typeof expectedRaw !== 'object') {
+    res.status(400).json({ error: 'expected is required' });
+    return;
+  }
+
+  const exp = expectedRaw as Record<string, unknown>;
+  const title = typeof exp['title'] === 'string' ? exp['title'].trim() : '';
+  if (!title) {
+    res.status(400).json({ error: 'expected.title is required' });
+    return;
+  }
+
+  const description = typeof exp['description'] === 'string' ? exp['description'] : '';
+  if (!isTaskStatus(exp['status'])) {
+    res.status(400).json({ error: 'expected.status must be todo, doing, or done' });
+    return;
+  }
+
+  const estParsed = parseEstimate(exp['estimate']);
+  if (estParsed.ok === false) {
+    res.status(400).json({ error: estParsed.error });
+    return;
+  }
+
+  const line =
+    JSON.stringify({
+      task: task.trim(),
+      expected: {
+        title,
+        description,
+        status: exp['status'],
+        estimate: estParsed.value,
+      },
+    }) + '\n';
+
+  try {
+    const resolved = path.resolve(logPath);
+    await mkdir(path.dirname(resolved), { recursive: true });
+    await appendFile(resolved, line, 'utf8');
+    res.status(204).send();
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Failed to write voice log';
+    res.status(500).json({ error: message });
   }
 }
