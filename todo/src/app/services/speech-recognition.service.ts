@@ -34,7 +34,10 @@ export type RecorderState =
   | 'error';
 
 /** Lazy handle to the Whisper pipeline; kept at module scope so repeated use doesn't re-download. */
-type WhisperPipeline = (input: Float32Array, options?: Record<string, unknown>) => Promise<{ text: string } | Array<{ text: string }>>;
+type WhisperPipeline = (
+  input: Float32Array,
+  options?: Record<string, unknown>,
+) => Promise<{ text: string } | Array<{ text: string }>>;
 let whisperPipeline: WhisperPipeline | null = null;
 let whisperLoader: Promise<WhisperPipeline> | null = null;
 
@@ -57,7 +60,12 @@ export class SpeechRecognitionService {
   /** True while a dictation is actively capturing or transcribing (UI disables the mic for new starts). */
   isBusy(): boolean {
     const s = this.stateSig();
-    return s === 'requesting-permission' || s === 'loading-model' || s === 'recording' || s === 'processing';
+    return (
+      s === 'requesting-permission' ||
+      s === 'loading-model' ||
+      s === 'recording' ||
+      s === 'processing'
+    );
   }
 
   /**
@@ -134,7 +142,9 @@ export class SpeechRecognitionService {
     this.chunks = [];
 
     if (blob.size === 0) {
-      this.failWithError('No audio was captured. Check your microphone and try again.');
+      this.failWithError(
+        'No audio was captured. Check your microphone and try again.',
+      );
       return null;
     }
 
@@ -142,7 +152,9 @@ export class SpeechRecognitionService {
     try {
       const samples = await this.decodeToMono16k(blob);
       if (!samples || !samples.length) {
-        this.failWithError('No speech detected — try speaking closer to the microphone.');
+        this.failWithError(
+          'No speech detected — try speaking closer to the microphone.',
+        );
         return null;
       }
 
@@ -150,7 +162,9 @@ export class SpeechRecognitionService {
       // whisper-tiny.en is English-only; passing `language` or `task` throws
       // "Cannot specify `task` or `language` for an English-only model".
       const result = await pipeline(samples);
-      const text = Array.isArray(result) ? result[0]?.text ?? '' : result?.text ?? '';
+      const text = Array.isArray(result)
+        ? (result[0]?.text ?? '')
+        : (result?.text ?? '');
       const trimmed = text.trim();
 
       if (!trimmed) {
@@ -164,7 +178,7 @@ export class SpeechRecognitionService {
       this.failWithError(
         err instanceof Error && err.message
           ? `Transcription failed: ${err.message}`
-          : 'Transcription failed. Please try again.'
+          : 'Transcription failed. Please try again.',
       );
       return null;
     }
@@ -241,7 +255,10 @@ export class SpeechRecognitionService {
    */
   private async decodeToMono16k(blob: Blob): Promise<Float32Array | null> {
     const arrayBuffer = await blob.arrayBuffer();
-    const AudioCtx = (window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext);
+    const AudioCtx =
+      window.AudioContext ||
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
     if (!AudioCtx) {
       throw new Error('Web Audio API is not available in this browser.');
     }
@@ -253,12 +270,19 @@ export class SpeechRecognitionService {
       await ctx.close().catch(() => undefined);
     }
 
-    if (buffer.sampleRate === WHISPER_SAMPLE_RATE && buffer.numberOfChannels === 1) {
+    if (
+      buffer.sampleRate === WHISPER_SAMPLE_RATE &&
+      buffer.numberOfChannels === 1
+    ) {
       return buffer.getChannelData(0).slice();
     }
 
     const targetFrames = Math.ceil(buffer.duration * WHISPER_SAMPLE_RATE);
-    const offline = new OfflineAudioContext(1, targetFrames, WHISPER_SAMPLE_RATE);
+    const offline = new OfflineAudioContext(
+      1,
+      targetFrames,
+      WHISPER_SAMPLE_RATE,
+    );
     const source = offline.createBufferSource();
     source.buffer = buffer;
     source.connect(offline.destination);
@@ -278,21 +302,28 @@ export class SpeechRecognitionService {
     whisperLoader = (async () => {
       // Dynamic import keeps the large transformers bundle out of the initial app chunk.
       const mod = await import('@huggingface/transformers');
-      const pipe = (await mod.pipeline('automatic-speech-recognition', WHISPER_MODEL, {
-        dtype: WHISPER_DTYPE,
-        device: 'wasm',
-        // Defensive: skip the `extended` graph-optimization pass that attempts DQ→MatMulNBits
-        // fusion. That pass blows up on the mixed-quant Whisper decoders in some model exports.
-        session_options: { graphOptimizationLevel: 'basic' },
-        progress_callback: (evt: { status?: string; progress?: number }) => {
-          if (evt?.status === 'progress' && typeof evt.progress === 'number') {
-            this.modelProgressSig.set(Math.round(evt.progress));
-          }
-          if (evt?.status === 'done' || evt?.status === 'ready') {
-            this.modelProgressSig.set(null);
-          }
+      const pipe = (await mod.pipeline(
+        'automatic-speech-recognition',
+        WHISPER_MODEL,
+        {
+          dtype: WHISPER_DTYPE,
+          device: 'wasm',
+          // Defensive: skip the `extended` graph-optimization pass that attempts DQ→MatMulNBits
+          // fusion. That pass blows up on the mixed-quant Whisper decoders in some model exports.
+          session_options: { graphOptimizationLevel: 'basic' },
+          progress_callback: (evt: { status?: string; progress?: number }) => {
+            if (
+              evt?.status === 'progress' &&
+              typeof evt.progress === 'number'
+            ) {
+              this.modelProgressSig.set(Math.round(evt.progress));
+            }
+            if (evt?.status === 'done' || evt?.status === 'ready') {
+              this.modelProgressSig.set(null);
+            }
+          },
         },
-      })) as unknown as WhisperPipeline;
+      )) as unknown as WhisperPipeline;
       whisperPipeline = pipe;
       this.modelProgressSig.set(null);
       return pipe;

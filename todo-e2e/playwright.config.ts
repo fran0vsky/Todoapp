@@ -25,13 +25,13 @@ export default defineConfig({
     {
       command: 'npx nx run api:serve',
       url: 'http://localhost:3333/api/health',
-      reuseExistingServer: true,
+      reuseExistingServer: !process.env['CI'],
       cwd: workspaceRoot,
     },
     {
       command: 'npx nx run todo:serve',
       url: 'http://localhost:4200',
-      reuseExistingServer: true,
+      reuseExistingServer: !process.env['CI'],
       cwd: workspaceRoot,
     },
   ],

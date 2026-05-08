@@ -32,13 +32,14 @@
           aria-haspopup="dialog"
           aria-controls="account-panel"
           class="max-w-[min(100%,14rem)] truncate rounded-lg border border-neutral-700/80 bg-neutral-900/60 text-neutral-200 px-2.5 py-1 md:px-3 md:py-1.5 text-xs font-medium hover:border-neutral-600 hover:bg-neutral-800/80 focus:outline-none focus:ring-2 focus:ring-purple-400/40 leading-none text-left"
-          [attr.title]="authService.currentUser()!.email"
+          [attr.title]="authService.currentUser()?.email ?? ''"
         >
           Hello,
-          {{ authService.displayLabel(authService.currentUser()!) }}
+          {{ authService.displayLabel(authService.currentUser()) }}
         </button>
 
         @if (panelOpen()) {
+          <!-- eslint-disable-next-line @angular-eslint/template/click-events-have-key-events -->
           <div
             id="account-panel"
             role="dialog"
@@ -48,11 +49,13 @@
           >
             <p
               class="mb-3 truncate text-xs text-neutral-500"
-              [title]="authService.currentUser()!.email"
+              [title]="authService.currentUser()?.email ?? ''"
             >
-              {{ authService.currentUser()!.email }}
+              {{ authService.currentUser()?.email ?? '' }}
             </p>
-            <label for="nickname-input" class="mb-1 block text-xs font-medium text-neutral-400"
+            <label
+              for="nickname-input"
+              class="mb-1 block text-xs font-medium text-neutral-400"
               >Nickname</label
             >
             <input
@@ -65,7 +68,9 @@
               placeholder="Shown instead of email"
               class="mb-1 w-full rounded-lg border border-neutral-700 bg-neutral-900 px-3 py-2 text-sm text-white placeholder-neutral-500 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-purple-400/40"
             />
-            <p class="mb-3 text-[0.65rem] text-neutral-500">Leave empty to use your email in the greeting.</p>
+            <p class="mb-3 text-[0.65rem] text-neutral-500">
+              Leave empty to use your email in the greeting.
+            </p>
             @if (saveError()) {
               <p class="mb-2 text-xs text-red-400">{{ saveError() }}</p>
             }

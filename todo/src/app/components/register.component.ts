@@ -81,44 +81,64 @@ export class RegisterComponent implements OnInit {
   }
 
   onSubmit(): void {
-    if (!isValidEmailFormat(this.email) || !isPasswordValidForRegistration(this.password)) {
+    if (
+      !isValidEmailFormat(this.email) ||
+      !isPasswordValidForRegistration(this.password)
+    ) {
       return;
     }
     this.errorMessage.set(null);
     this.successMessage.set(null);
     this.isLoading.set(true);
 
-    this.authService.signUp(this.email, this.password).pipe(
-      finalize(() => this.isLoading.set(false))
-    ).subscribe({
-      next: (response) => {
-        if (response.error) {
-          this.errorMessage.set(response.error.message);
-        } else if (response.data.user) {
-          // Registration successful, now auto-login
-          console.log('[RegisterComponent] Registration successful, attempting auto-login.');
-          this.authService.signIn(this.email, this.password).subscribe({
-            next: (signInResponse) => {
-              if (signInResponse.error) {
-                this.errorMessage.set('Registration successful, but auto-login failed: ' + signInResponse.error.message);
-              } else if (signInResponse.data.session) {
-                console.log('[RegisterComponent] Auto-login successful. Redirecting to home.');
-                this.router.navigate(['/']);
-              } else {
-                this.errorMessage.set('Registration successful, but an unexpected auto-login error occurred.');
-              }
-            },
-            error: (signInError) => {
-              this.errorMessage.set('Registration successful, but auto-login network error: ' + signInError.message);
-            }
-          });
-        } else {
-          this.errorMessage.set('An unexpected error occurred during registration.');
-        }
-      },
-      error: (err) => {
-        this.errorMessage.set(err.message || 'Network error during registration.');
-      },
-    });
+    this.authService
+      .signUp(this.email, this.password)
+      .pipe(finalize(() => this.isLoading.set(false)))
+      .subscribe({
+        next: (response) => {
+          if (response.error) {
+            this.errorMessage.set(response.error.message);
+          } else if (response.data.user) {
+            // Registration successful, now auto-login
+            console.log(
+              '[RegisterComponent] Registration successful, attempting auto-login.',
+            );
+            this.authService.signIn(this.email, this.password).subscribe({
+              next: (signInResponse) => {
+                if (signInResponse.error) {
+                  this.errorMessage.set(
+                    'Registration successful, but auto-login failed: ' +
+                      signInResponse.error.message,
+                  );
+                } else if (signInResponse.data.session) {
+                  console.log(
+                    '[RegisterComponent] Auto-login successful. Redirecting to home.',
+                  );
+                  this.router.navigate(['/']);
+                } else {
+                  this.errorMessage.set(
+                    'Registration successful, but an unexpected auto-login error occurred.',
+                  );
+                }
+              },
+              error: (signInError) => {
+                this.errorMessage.set(
+                  'Registration successful, but auto-login network error: ' +
+                    signInError.message,
+                );
+              },
+            });
+          } else {
+            this.errorMessage.set(
+              'An unexpected error occurred during registration.',
+            );
+          }
+        },
+        error: (err) => {
+          this.errorMessage.set(
+            err.message || 'Network error during registration.',
+          );
+        },
+      });
   }
 }

@@ -15,7 +15,7 @@ export class SafeHtmlPipe implements PipeTransform {
     const raw = value?.trim() ? value : '';
     if (!raw) {
       return this.sanitizer.bypassSecurityTrustHtml(
-        '<span class="opacity-40 select-none">&nbsp;</span>'
+        '<span class="opacity-40 select-none">&nbsp;</span>',
       );
     }
     // Plain text from older tasks: no tags — wrap as text-safe
@@ -25,11 +25,10 @@ export class SafeHtmlPipe implements PipeTransform {
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
       return this.sanitizer.bypassSecurityTrustHtml(
-        `<span class="whitespace-pre-wrap">${escaped}</span>`
+        `<span class="whitespace-pre-wrap">${escaped}</span>`,
       );
     }
-    const cleaned =
-      this.sanitizer.sanitize(SecurityContext.HTML, raw) ?? '';
+    const cleaned = this.sanitizer.sanitize(SecurityContext.HTML, raw) ?? '';
     return this.sanitizer.bypassSecurityTrustHtml(cleaned);
   }
 }

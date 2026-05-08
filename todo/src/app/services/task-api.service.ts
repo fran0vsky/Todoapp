@@ -65,7 +65,7 @@ export class TaskApiService {
   archiveTask(id: number): Observable<{ archived: boolean; id: number }> {
     return this.http.patch<{ archived: boolean; id: number }>(
       `${this.baseUrl}/${id}/archive`,
-      {}
+      {},
     );
   }
 
@@ -73,4 +73,3 @@ export class TaskApiService {
     return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 }
-

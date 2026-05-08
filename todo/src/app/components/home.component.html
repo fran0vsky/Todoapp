@@ -1,4 +1,6 @@
-<div class="flex flex-1 min-h-0 flex-col bg-black text-white px-6 pt-3 pb-6 md:px-10 md:pt-4 md:pb-10">
+<div
+  class="flex flex-1 min-h-0 flex-col bg-black text-white px-6 pt-3 pb-6 md:px-10 md:pt-4 md:pb-10"
+>
   <div class="flex flex-1 min-h-0 flex-col w-full max-w-[1600px] mx-auto">
     <app-home-navbar />
 
@@ -9,7 +11,9 @@
       >
         ← All projects
       </a>
-      <h1 class="text-2xl md:text-3xl font-semibold text-white tracking-tight break-words">
+      <h1
+        class="text-2xl md:text-3xl font-semibold text-white tracking-tight break-words"
+      >
         {{ taskState.activeProjectName() }}
       </h1>
     </div>
@@ -33,29 +37,49 @@
               type="button"
               (click)="openVoiceModal()"
               class="rounded-xl p-3 text-neutral-400 hover:text-purple-300 hover:bg-purple-500/10 border border-neutral-700 hover:border-purple-500/40 focus:outline-none focus:ring-2 focus:ring-purple-400/50 transition-colors"
-              aria-label="Add task by voice"
-              title="Add task by voice"
+              aria-label="Voice: new task or board command"
+              title="Voice: describe a new task or say a command (e.g. filter my tasks, move task X to in progress)"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 15a5 5 0 005-5V7a5 5 0 00-10 0v3a5 5 0 005 5z" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                class="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M19 11a7 7 0 01-14 0m7 7v3m-4 0h8M12 15a5 5 0 005-5V7a5 5 0 00-10 0v3a5 5 0 005 5z"
+                />
               </svg>
             </button>
           </div>
-          <div class="flex flex-col gap-2 min-w-0 sm:max-w-md sm:flex-1 sm:justify-end sm:items-end">
-            <label for="assignee-filter" class="text-neutral-400 text-xs font-medium uppercase tracking-wide"
+          <div
+            class="flex flex-col gap-2 min-w-0 sm:max-w-md sm:flex-1 sm:justify-end sm:items-end"
+          >
+            <label
+              for="assignee-filter"
+              class="text-neutral-400 text-xs font-medium uppercase tracking-wide"
               >Filter by assignee</label
             >
             <select
               id="assignee-filter"
               [value]="taskState.assigneeFilter()"
-              (change)="taskState.setAssigneeFilterFromSelect($any($event.target).value)"
+              (change)="
+                taskState.setAssigneeFilterFromSelect($any($event.target).value)
+              "
               class="w-full sm:w-auto min-w-[min(100%,14rem)] rounded-lg bg-neutral-900 border border-neutral-700 text-neutral-100 px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400/40 hover:border-neutral-600"
               aria-label="Filter tasks by assignee"
             >
               <option value="all">All assignees</option>
               <option value="unassigned">Unassigned</option>
               @for (email of taskState.assigneeFilterOptions(); track email) {
-                <option [value]="email">{{ taskState.assigneeLabel(email) }}</option>
+                <option [value]="email">
+                  {{ taskState.assigneeLabel(email) }}
+                </option>
               }
             </select>
           </div>
@@ -100,7 +124,12 @@
               stroke="currentColor"
               aria-hidden="true"
             >
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                stroke-width="2"
+                d="M15 19l-7-7 7-7"
+              />
             </svg>
             <span
               class="text-xs font-semibold tracking-wide uppercase [writing-mode:vertical-rl] max-lg:[writing-mode:horizontal-tb] max-lg:text-[0.65rem]"
@@ -112,7 +141,9 @@
             <div
               class="flex shrink-0 items-center justify-between gap-2 px-3 py-2 border-b border-neutral-800 bg-neutral-900/60"
             >
-              <h2 class="text-neutral-200 font-medium text-sm truncate">Archived tasks</h2>
+              <h2 class="text-neutral-200 font-medium text-sm truncate">
+                Archived tasks
+              </h2>
               <button
                 type="button"
                 (click)="toggleArchivePanel()"
@@ -136,16 +167,22 @@
               </button>
             </div>
 
-            <div class="scrollbar-dark flex-1 min-h-0 overflow-y-auto overscroll-y-contain p-3">
+            <div
+              class="scrollbar-dark flex-1 min-h-0 overflow-y-auto overscroll-y-contain p-3"
+            >
               @if (taskState.archiveLoading()) {
-                <div class="flex items-center justify-center gap-3 text-neutral-400 py-8">
+                <div
+                  class="flex items-center justify-center gap-3 text-neutral-400 py-8"
+                >
                   <span
                     class="inline-block w-5 h-5 border-2 border-neutral-500 border-t-amber-200 rounded-full animate-spin"
                   ></span>
                   <span class="text-sm">Loading archive...</span>
                 </div>
               } @else if (taskState.archivedTasks().length === 0) {
-                <p class="text-neutral-500 text-sm text-center py-8">No archived tasks.</p>
+                <p class="text-neutral-500 text-sm text-center py-8">
+                  No archived tasks.
+                </p>
               } @else {
                 <ul class="space-y-3">
                   @for (task of taskState.archivedTasks(); track task.id) {
@@ -153,20 +190,35 @@
                       class="rounded-xl bg-neutral-800/70 border border-neutral-700 px-4 py-3 flex flex-col gap-2 min-w-0"
                     >
                       <div class="flex-1 min-w-0">
-                        <div class="flex items-start justify-between gap-2 min-w-0">
-                          <h3 class="text-neutral-200 font-medium break-words text-sm flex-1 min-w-0 leading-snug">
+                        <div
+                          class="flex items-start justify-between gap-2 min-w-0"
+                        >
+                          <h3
+                            class="text-neutral-200 font-medium break-words text-sm flex-1 min-w-0 leading-snug"
+                          >
                             {{ task.title }}
                           </h3>
-                          @if (task.assignee_email || task.estimate != null) {
-                            <div class="flex items-center justify-end gap-2 shrink-0 max-w-[min(48%,11rem)]">
+                          @if (
+                            task.assignee_email ||
+                            (task.estimate !== undefined &&
+                              task.estimate !== null)
+                          ) {
+                            <div
+                              class="flex items-center justify-end gap-2 shrink-0 max-w-[min(48%,11rem)]"
+                            >
                               @if (task.assignee_email) {
                                 <span
                                   class="text-[0.65rem] text-neutral-500 truncate text-right"
                                   [title]="task.assignee_email"
-                                  >{{ taskState.assigneeLabel(task.assignee_email) }}</span
+                                  >{{
+                                    taskState.assigneeLabel(task.assignee_email)
+                                  }}</span
                                 >
                               }
-                              @if (task.estimate != null) {
+                              @if (
+                                task.estimate !== undefined &&
+                                task.estimate !== null
+                              ) {
                                 <span
                                   class="inline-flex items-center justify-center min-w-[1.5rem] h-6 px-1 rounded-md bg-neutral-700/90 border border-neutral-600/80 text-neutral-200 text-[0.65rem] font-bold tabular-nums shrink-0"
                                   >{{ task.estimate }}</span

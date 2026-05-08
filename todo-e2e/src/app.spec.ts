@@ -4,6 +4,7 @@ import {
   openAddTaskModal,
   saveTaskForm,
   taskCardInColumn,
+  VOICE_BOARD_MIC,
   waitForBoardLoaded,
   waitForProjectsPage,
 } from './helpers';
@@ -36,7 +37,9 @@ test.describe('tasks', () => {
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(title);
     await saveTaskForm(page);
-    await expect(page.getByPlaceholder('Title...')).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByPlaceholder('Title...')).toBeHidden({
+      timeout: 10_000,
+    });
 
     await waitForBoardLoaded(page);
     await expect(taskCardInColumn(page, 'To be done', title)).toBeVisible();
@@ -50,15 +53,21 @@ test.describe('tasks', () => {
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(original);
     await saveTaskForm(page);
-    await expect(page.getByPlaceholder('Title...')).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByPlaceholder('Title...')).toBeHidden({
+      timeout: 10_000,
+    });
     await waitForBoardLoaded(page);
 
     const updated = `Updated ${Date.now()}`;
-    await taskCardInColumn(page, 'To be done', original).getByRole('button', { name: 'Edit' }).click();
+    await taskCardInColumn(page, 'To be done', original)
+      .getByRole('button', { name: 'Edit' })
+      .click();
     await expect(page.getByPlaceholder('Title...')).toBeVisible();
     await page.getByPlaceholder('Title...').fill(updated);
     await saveTaskForm(page);
-    await expect(page.getByPlaceholder('Title...')).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByPlaceholder('Title...')).toBeHidden({
+      timeout: 10_000,
+    });
     await waitForBoardLoaded(page);
 
     await expect(taskCardInColumn(page, 'To be done', updated)).toBeVisible();
@@ -72,23 +81,35 @@ test.describe('tasks', () => {
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(title);
     await saveTaskForm(page);
-    await expect(page.getByPlaceholder('Title...')).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByPlaceholder('Title...')).toBeHidden({
+      timeout: 10_000,
+    });
     await waitForBoardLoaded(page);
 
-    await taskCardInColumn(page, 'To be done', title).getByRole('button', { name: 'Edit' }).click();
+    await taskCardInColumn(page, 'To be done', title)
+      .getByRole('button', { name: 'Edit' })
+      .click();
     await page.getByLabel('Task status').selectOption('done');
     await saveTaskForm(page);
-    await expect(page.getByPlaceholder('Title...')).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByPlaceholder('Title...')).toBeHidden({
+      timeout: 10_000,
+    });
     await waitForBoardLoaded(page);
 
     await expect(taskCardInColumn(page, 'Done', title)).toBeVisible();
-    await taskCardInColumn(page, 'Done', title).getByRole('button', { name: 'Archive' }).click();
+    await taskCardInColumn(page, 'Done', title)
+      .getByRole('button', { name: 'Archive' })
+      .click();
     await waitForBoardLoaded(page);
-    await expect(taskCardInColumn(page, 'Done', title)).toBeHidden({ timeout: 15_000 });
+    await expect(taskCardInColumn(page, 'Done', title)).toBeHidden({
+      timeout: 15_000,
+    });
 
     const archiveRegion = page.getByRole('region', { name: 'Archived tasks' });
     await archiveRegion.locator('button').first().click();
-    await expect(page.getByRole('heading', { name: 'Archived tasks' })).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Archived tasks' }),
+    ).toBeVisible();
     await expect(page.getByRole('heading', { name: title })).toBeVisible();
 
     await page
@@ -100,7 +121,9 @@ test.describe('tasks', () => {
     await expect(taskCardInColumn(page, 'Done', title)).toBeVisible();
   });
 
-  test('exposes a dictation microphone button in the add task form', async ({ page }) => {
+  test('exposes a dictation microphone button in the add task form', async ({
+    page,
+  }) => {
     const projectName = `P ${Date.now()}`;
     await createProjectAndOpenBoard(page, projectName);
 
@@ -120,10 +143,14 @@ test.describe('tasks', () => {
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(title);
     await saveTaskForm(page);
-    await expect(page.getByPlaceholder('Title...')).toBeHidden({ timeout: 10_000 });
+    await expect(page.getByPlaceholder('Title...')).toBeHidden({
+      timeout: 10_000,
+    });
     await waitForBoardLoaded(page);
 
-    await taskCardInColumn(page, 'To be done', title).getByRole('button', { name: 'Remove' }).click();
+    await taskCardInColumn(page, 'To be done', title)
+      .getByRole('button', { name: 'Remove' })
+      .click();
     await waitForBoardLoaded(page);
     await expect(taskCardInColumn(page, 'To be done', title)).toHaveCount(0);
   });
@@ -134,34 +161,46 @@ test.describe('voice task', () => {
     const projectName = `Voice ${Date.now()}`;
     await createProjectAndOpenBoard(page, projectName);
 
-    const micBtn = page.getByRole('button', { name: 'Add task by voice' });
+    const micBtn = page.getByRole('button', { name: VOICE_BOARD_MIC });
     await expect(micBtn).toBeVisible();
     await expect(micBtn).toBeEnabled();
   });
 
-  test('clicking mic button opens the voice task modal', async ({ page, context }) => {
+  test('clicking mic button opens the voice task modal', async ({
+    page,
+    context,
+  }) => {
     // Grant microphone permission so the browser does not show a native prompt.
     await context.grantPermissions(['microphone']);
 
     const projectName = `Voice ${Date.now()}`;
     await createProjectAndOpenBoard(page, projectName);
 
-    await page.getByRole('button', { name: 'Add task by voice' }).click();
+    await page.getByRole('button', { name: VOICE_BOARD_MIC }).click();
 
     // The modal should appear in recording state with the "Listening…" heading.
-    await expect(page.getByRole('heading', { name: /listening/i })).toBeVisible({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: /listening/i })).toBeVisible(
+      { timeout: 5_000 },
+    );
   });
 
-  test('voice modal can be closed with the close button', async ({ page, context }) => {
+  test('voice modal can be closed with the close button', async ({
+    page,
+    context,
+  }) => {
     await context.grantPermissions(['microphone']);
 
     const projectName = `Voice ${Date.now()}`;
     await createProjectAndOpenBoard(page, projectName);
 
-    await page.getByRole('button', { name: 'Add task by voice' }).click();
-    await expect(page.getByRole('heading', { name: /listening/i })).toBeVisible({ timeout: 5_000 });
+    await page.getByRole('button', { name: VOICE_BOARD_MIC }).click();
+    await expect(page.getByRole('heading', { name: /listening/i })).toBeVisible(
+      { timeout: 5_000 },
+    );
 
     await page.getByRole('button', { name: 'Close' }).click();
-    await expect(page.getByRole('heading', { name: /listening/i })).toBeHidden({ timeout: 5_000 });
+    await expect(page.getByRole('heading', { name: /listening/i })).toBeHidden({
+      timeout: 5_000,
+    });
   });
 });

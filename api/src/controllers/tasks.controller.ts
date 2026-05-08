@@ -1,6 +1,10 @@
 import type { Request, Response } from 'express';
 import type { CreateTaskBody, UpdateTaskBody } from '../types';
-import { isSimpleEmail, isTaskStatus, parseEstimate } from '../services/validation';
+import {
+  isSimpleEmail,
+  isTaskStatus,
+  parseEstimate,
+} from '../services/validation';
 import {
   archiveTask,
   deleteTaskById,
@@ -29,13 +33,16 @@ export async function getTasks(req: Request, res: Response): Promise<void> {
 export async function postTask(req: Request, res: Response): Promise<void> {
   const body = req.body as CreateTaskBody;
   const title = typeof body.title === 'string' ? body.title.trim() : '';
-  const description = typeof body.description === 'string' ? body.description.trim() : '';
+  const description =
+    typeof body.description === 'string' ? body.description.trim() : '';
   const status = body.status;
 
   let assigneeEmail: string | null = null;
   if (body.assignee_email !== undefined && body.assignee_email !== null) {
     if (typeof body.assignee_email !== 'string') {
-      res.status(400).json({ error: 'assignee_email must be a string or null' });
+      res
+        .status(400)
+        .json({ error: 'assignee_email must be a string or null' });
       return;
     }
     const trimmed = body.assignee_email.trim();
@@ -73,7 +80,11 @@ export async function postTask(req: Request, res: Response): Promise<void> {
   }
 
   const projectId = body.project_id;
-  if (typeof projectId !== 'number' || !Number.isInteger(projectId) || projectId <= 0) {
+  if (
+    typeof projectId !== 'number' ||
+    !Number.isInteger(projectId) ||
+    projectId <= 0
+  ) {
     res.status(400).json({ error: 'project_id must be a positive integer' });
     return;
   }
@@ -135,7 +146,9 @@ export async function patchTask(req: Request, res: Response): Promise<void> {
         updates['assignee_email'] = trimmed;
       }
     } else {
-      res.status(400).json({ error: 'assignee_email must be a string or null' });
+      res
+        .status(400)
+        .json({ error: 'assignee_email must be a string or null' });
       return;
     }
   }
@@ -164,7 +177,10 @@ export async function patchTask(req: Request, res: Response): Promise<void> {
   res.json(data);
 }
 
-export async function getArchivedTasks(req: Request, res: Response): Promise<void> {
+export async function getArchivedTasks(
+  req: Request,
+  res: Response,
+): Promise<void> {
   const projectId = Number(req.query['projectId']);
   if (!Number.isInteger(projectId) || projectId <= 0) {
     res.status(400).json({ error: 'projectId query parameter is required' });
@@ -179,7 +195,10 @@ export async function getArchivedTasks(req: Request, res: Response): Promise<voi
   res.json(data);
 }
 
-export async function patchTaskRestore(req: Request, res: Response): Promise<void> {
+export async function patchTaskRestore(
+  req: Request,
+  res: Response,
+): Promise<void> {
   const id = Number(req.params['id']);
   if (!Number.isInteger(id) || id <= 0) {
     res.status(400).json({ error: 'invalid task id' });
@@ -196,7 +215,10 @@ export async function patchTaskRestore(req: Request, res: Response): Promise<voi
   res.json(data);
 }
 
-export async function patchTaskArchive(req: Request, res: Response): Promise<void> {
+export async function patchTaskArchive(
+  req: Request,
+  res: Response,
+): Promise<void> {
   const id = Number(req.params['id']);
   if (!Number.isInteger(id) || id <= 0) {
     res.status(400).json({ error: 'invalid task id' });

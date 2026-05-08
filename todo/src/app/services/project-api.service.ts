@@ -36,7 +36,7 @@ export class ProjectApiService {
         return this.http.delete<void>(`${this.baseUrl}/${id}`, {
           headers: { Authorization: `Bearer ${session.access_token}` },
         });
-      })
+      }),
     );
   }
 }

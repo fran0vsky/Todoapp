@@ -67,7 +67,8 @@ export class TaskStateService {
 
   readonly assignableUsers = this.assignableUsersSig.asReadonly();
   readonly assignableUsersLoading = this.assignableUsersLoadingSig.asReadonly();
-  readonly assignableUsersLoadError = this.assignableUsersLoadErrorSig.asReadonly();
+  readonly assignableUsersLoadError =
+    this.assignableUsersLoadErrorSig.asReadonly();
 
   // Public selectors
   readonly tasks = computed(() => this.state().tasks);
@@ -92,7 +93,11 @@ export class TaskStateService {
       if (e) emails.add(e);
     }
     const current = this.assigneeFilterSig();
-    if (typeof current === 'string' && current !== 'all' && current !== 'unassigned') {
+    if (
+      typeof current === 'string' &&
+      current !== 'all' &&
+      current !== 'unassigned'
+    ) {
       emails.add(current);
     }
     return [...emails].sort((a, b) => a.localeCompare(b));
@@ -103,7 +108,8 @@ export class TaskStateService {
     const tasks = this.state().tasks;
     const f = this.assigneeFilterSig();
     if (f === 'all') return tasks;
-    if (f === 'unassigned') return tasks.filter((t) => !t.assignee_email?.trim());
+    if (f === 'unassigned')
+      return tasks.filter((t) => !t.assignee_email?.trim());
     return tasks.filter((t) => t.assignee_email?.trim() === f);
   });
 
@@ -118,33 +124,41 @@ export class TaskStateService {
 
   // Derived state
   readonly formModalTitle = computed(() =>
-    this.state().formMode === 'add' ? 'Add task' : 'Edit task'
+    this.state().formMode === 'add' ? 'Add task' : 'Edit task',
   );
 
   readonly workInProgressFull = computed(
     () =>
       this.state().tasks.filter((t) => t.status === TaskStatus.Doing).length >=
-      1
+      1,
   );
 
   readonly tasksToBeDone = computed(() =>
-    this.visibleTasks().filter((t) => t.status === TaskStatus.Todo)
+    this.visibleTasks().filter((t) => t.status === TaskStatus.Todo),
   );
   readonly tasksWorkingOnIt = computed(() =>
-    this.visibleTasks().filter((t) => t.status === TaskStatus.Doing)
+    this.visibleTasks().filter((t) => t.status === TaskStatus.Doing),
   );
   readonly tasksDone = computed(() =>
-    this.visibleTasks().filter((t) => t.status === TaskStatus.Done)
+    this.visibleTasks().filter((t) => t.status === TaskStatus.Done),
   );
 
   readonly formSubmitDisabled = computed(() => {
     const s = this.state();
     if (!s.formTitle.trim()) return true;
     if (!hasTaskDescription(s.formDescription)) return true;
-    if (s.formMode === 'add' && s.formStatus === TaskStatus.Doing && this.workInProgressFull()) {
+    if (
+      s.formMode === 'add' &&
+      s.formStatus === TaskStatus.Doing &&
+      this.workInProgressFull()
+    ) {
       return true;
     }
-    if (s.formMode === 'edit' && s.formStatus === TaskStatus.Doing && this.workInProgressFull()) {
+    if (
+      s.formMode === 'edit' &&
+      s.formStatus === TaskStatus.Doing &&
+      this.workInProgressFull()
+    ) {
       const currentTask = s.tasks.find((t) => t.id === s.editingTaskId);
       if (currentTask?.status !== TaskStatus.Doing) {
         return true;
@@ -156,7 +170,8 @@ export class TaskStateService {
   readonly formSaveDisabledHint = computed(() => {
     const s = this.state();
     if (!s.formTitle.trim()) return 'Enter a title first.';
-    if (!hasTaskDescription(s.formDescription)) return 'Description is required — fill in the description field before saving.';
+    if (!hasTaskDescription(s.formDescription))
+      return 'Description is required — fill in the description field before saving.';
     if (s.formStatus === TaskStatus.Doing && this.workInProgressFull()) {
       return 'Work in progress is full. Only one task allowed there.';
     }
@@ -201,6 +216,14 @@ export class TaskStateService {
     this.state.update((s) => ({ ...s, tasks: [...s.tasks, task] }));
   }
 
+  /** Merge an updated task from the API (e.g. voice command) without opening the edit modal. */
+  applyRemoteTaskUpdate(updated: Task): void {
+    this.state.update((s) => ({
+      ...s,
+      tasks: s.tasks.map((t) => (t.id === updated.id ? updated : t)),
+    }));
+  }
+
   /** Call when leaving the board (e.g. navigate to project list). */
   clearProjectContext(): void {
     this.assigneeFilterSig.set('all');
@@ -219,7 +242,7 @@ export class TaskStateService {
       catchError((err: unknown) => {
         this.assignableUsersLoadErrorSig.set(this.usersListErrorMessage(err));
         return of([]);
-      })
+      }),
     );
   }
 
@@ -270,7 +293,8 @@ export class TaskStateService {
   }
 
   openAddForm(): void {
-    this.state.update((s) => ({ ...s,
+    this.state.update((s) => ({
+      ...s,
       showFormModal: true,
       formMode: 'add',
       formTitle: '',
@@ -284,7 +308,8 @@ export class TaskStateService {
 
   openAddFormWithStatus(status: TaskStatus): void {
     if (status === TaskStatus.Doing && this.workInProgressFull()) return;
-    this.state.update((s) => ({ ...s,
+    this.state.update((s) => ({
+      ...s,
       showFormModal: true,
       formMode: 'add',
       formTitle: '',
@@ -297,7 +322,8 @@ export class TaskStateService {
   }
 
   startEdit(task: Task): void {
-    this.state.update((s) => ({ ...s,
+    this.state.update((s) => ({
+      ...s,
       showFormModal: true,
       formMode: 'edit',
       formTitle: task.title,
@@ -315,7 +341,8 @@ export class TaskStateService {
   }
 
   resetFormFields(): void {
-    this.state.update((s) => ({ ...s,
+    this.state.update((s) => ({
+      ...s,
       formTitle: '',
       formDescription: '',
       formStatus: TaskStatus.Todo,
@@ -368,11 +395,14 @@ export class TaskStateService {
         ...(s.formEstimate != null ? { estimate: s.formEstimate } : {}),
       })
       .subscribe({
-      next: (created) => {
-        this.state.update((state) => ({ ...state, tasks: [...state.tasks, created] }));
-        this.closeFormModal();
-      },
-    });
+        next: (created) => {
+          this.state.update((state) => ({
+            ...state,
+            tasks: [...state.tasks, created],
+          }));
+          this.closeFormModal();
+        },
+      });
   }
 
   private saveEdit(): void {
@@ -391,7 +421,8 @@ export class TaskStateService {
 
     this.api.updateTask(s.editingTaskId, updates).subscribe({
       next: (updated) => {
-        this.state.update((state) => ({ ...state,
+        this.state.update((state) => ({
+          ...state,
           tasks: state.tasks.map((t) => (t.id === updated.id ? updated : t)),
         }));
         this.closeFormModal();
@@ -402,7 +433,10 @@ export class TaskStateService {
   removeTask(id: number): void {
     this.api.deleteTask(id).subscribe({
       next: () => {
-        this.state.update((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
+        this.state.update((s) => ({
+          ...s,
+          tasks: s.tasks.filter((t) => t.id !== id),
+        }));
       },
     });
   }
@@ -410,7 +444,10 @@ export class TaskStateService {
   archiveTask(id: number): void {
     this.api.archiveTask(id).subscribe({
       next: () => {
-        this.state.update((s) => ({ ...s, tasks: s.tasks.filter((t) => t.id !== id) }));
+        this.state.update((s) => ({
+          ...s,
+          tasks: s.tasks.filter((t) => t.id !== id),
+        }));
       },
     });
   }
@@ -419,10 +456,18 @@ export class TaskStateService {
     const pid = this.state().activeProjectId;
     if (pid == null) return;
     this.refreshAssignableUsers().subscribe();
-    this.state.update((s) => ({ ...s, showArchive: true, archiveLoading: true }));
+    this.state.update((s) => ({
+      ...s,
+      showArchive: true,
+      archiveLoading: true,
+    }));
     this.api.getArchivedTasks(pid).subscribe({
       next: (archivedTasks) => {
-        this.state.update((s) => ({ ...s, archivedTasks, archiveLoading: false }));
+        this.state.update((s) => ({
+          ...s,
+          archivedTasks,
+          archiveLoading: false,
+        }));
       },
       error: () => {
         this.state.update((s) => ({ ...s, archiveLoading: false }));
@@ -437,7 +482,8 @@ export class TaskStateService {
   restoreTask(id: number): void {
     this.api.restoreTask(id).subscribe({
       next: (restored) => {
-        this.state.update((s) => ({ ...s,
+        this.state.update((s) => ({
+          ...s,
           archivedTasks: s.archivedTasks.filter((t) => t.id !== id),
           tasks: [...s.tasks, restored],
         }));
@@ -446,11 +492,19 @@ export class TaskStateService {
   }
 
   openAssignTask(task: Task): void {
-    this.state.update((s) => ({ ...s, showAssignModal: true, taskForAssign: task }));
+    this.state.update((s) => ({
+      ...s,
+      showAssignModal: true,
+      taskForAssign: task,
+    }));
   }
 
   closeAssignModal(): void {
-    this.state.update((s) => ({ ...s, showAssignModal: false, taskForAssign: null }));
+    this.state.update((s) => ({
+      ...s,
+      showAssignModal: false,
+      taskForAssign: null,
+    }));
   }
 
   setTaskAssignee(email: string | null): void {

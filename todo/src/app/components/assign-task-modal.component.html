@@ -1,4 +1,6 @@
-<div class="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50">
+<div
+  class="fixed inset-0 bg-black/60 flex items-center justify-center p-6 z-50"
+>
   <div
     class="relative w-full max-w-md rounded-xl bg-neutral-900 border border-neutral-800 p-6 pt-14 shadow-lg shadow-black/40"
     role="dialog"
@@ -26,9 +28,13 @@
       </svg>
     </button>
 
-    <h2 id="assign-task-title" class="text-neutral-200 font-medium mb-1 pr-10">Assign task</h2>
+    <h2 id="assign-task-title" class="text-neutral-200 font-medium mb-1 pr-10">
+      Assign task
+    </h2>
     @if (taskState.taskForAssign(); as task) {
-      <p class="text-neutral-500 text-sm mb-4 truncate" [title]="task.title">{{ task.title }}</p>
+      <p class="text-neutral-500 text-sm mb-4 truncate" [title]="task.title">
+        {{ task.title }}
+      </p>
 
       @if (taskState.assignableUsersLoading()) {
         <div class="flex items-center gap-3 text-neutral-400 text-sm py-6">
@@ -40,28 +46,39 @@
         </div>
       } @else if (taskState.assignableUsersLoadError(); as errMsg) {
         <div class="space-y-3 mb-6" role="alert">
-          <p class="text-amber-200/90 text-sm font-medium">Could not load registered users.</p>
-          <p class="text-neutral-400 text-xs break-words rounded-lg bg-neutral-950/80 border border-neutral-800 px-3 py-2 font-mono">
+          <p class="text-amber-200/90 text-sm font-medium">
+            Could not load registered users.
+          </p>
+          <p
+            class="text-neutral-400 text-xs break-words rounded-lg bg-neutral-950/80 border border-neutral-800 px-3 py-2 font-mono"
+          >
             {{ errMsg }}
           </p>
           <p class="text-neutral-500 text-xs leading-relaxed">
             If you see “Bearer token” or “service role”: open
             <span class="text-neutral-300">api/.env</span> and set
             <span class="text-neutral-300">SUPABASE_KEY</span> to the
-            <strong class="text-neutral-200">service_role</strong> secret (not anon / not publishable). Supabase
-            Dashboard → Project Settings → API → Project API keys →
-            <strong class="text-neutral-200">service_role</strong> → Reveal, then copy. Restart
+            <strong class="text-neutral-200">service_role</strong> secret (not
+            anon / not publishable). Supabase Dashboard → Project Settings → API
+            → Project API keys →
+            <strong class="text-neutral-200">service_role</strong> → Reveal,
+            then copy. Restart
             <span class="text-neutral-300">npx nx serve api</span>.
           </p>
         </div>
       } @else if (taskState.assignableUsers().length === 0) {
         <p class="text-neutral-400 text-sm mb-6" role="status">
-          No registered users yet. Sign up accounts first, then you can assign tasks here.
+          No registered users yet. Sign up accounts first, then you can assign
+          tasks here.
         </p>
       } @else {
         <form [formGroup]="form" (ngSubmit)="applyAssign()" class="space-y-4">
           <div>
-            <label class="block text-neutral-400 text-xs mb-2" for="assign-user-select">Registered user</label>
+            <label
+              class="block text-neutral-400 text-xs mb-2"
+              for="assign-user-select"
+              >Registered user</label
+            >
             <div class="relative">
               <select
                 id="assign-user-select"
@@ -71,14 +88,21 @@
               >
                 <option value="">Choose a user…</option>
                 @for (u of taskState.assignableUsers(); track u.email) {
-                  <option [value]="u.email">{{ taskState.assigneeOptionLabel(u) }}</option>
+                  <option [value]="u.email">
+                    {{ taskState.assigneeOptionLabel(u) }}
+                  </option>
                 }
               </select>
               <span
                 class="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400"
                 aria-hidden="true"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4"
+                  viewBox="0 0 20 20"
+                  fill="currentColor"
+                >
                   <path
                     fill-rule="evenodd"
                     d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z"
@@ -115,7 +139,11 @@
         </form>
       }
 
-      @if (!taskState.assignableUsersLoading() && (taskState.assignableUsersLoadError() || taskState.assignableUsers().length === 0)) {
+      @if (
+        !taskState.assignableUsersLoading() &&
+        (taskState.assignableUsersLoadError() ||
+          taskState.assignableUsers().length === 0)
+      ) {
         <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap pt-2">
           <button
             type="button"

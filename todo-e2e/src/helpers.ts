@@ -1,18 +1,28 @@
 import type { Page } from '@playwright/test';
 import { expect } from '@playwright/test';
 
+/** Board toolbar voice button (`aria-label`). */
+export const VOICE_BOARD_MIC = 'Voice: new task or board command';
+
 export async function waitForProjectsPage(page: Page): Promise<void> {
-  await expect(page.getByRole('heading', { level: 1, name: 'Projects' })).toBeVisible({
+  await expect(
+    page.getByRole('heading', { level: 1, name: 'Projects' }),
+  ).toBeVisible({
     timeout: 30_000,
   });
 }
 
 export async function waitForBoardLoaded(page: Page): Promise<void> {
-  await expect(page.getByText('Loading tasks...')).toBeHidden({ timeout: 30_000 });
+  await expect(page.getByText('Loading tasks...')).toBeHidden({
+    timeout: 30_000,
+  });
 }
 
 /** Creates a project via the list UI and lands on `/p/:id`. */
-export async function createProjectAndOpenBoard(page: Page, name: string): Promise<void> {
+export async function createProjectAndOpenBoard(
+  page: Page,
+  name: string,
+): Promise<void> {
   await page.goto('/');
   await waitForProjectsPage(page);
   await page.getByPlaceholder(/project name/i).fill(name);
@@ -31,10 +41,26 @@ export async function saveTaskForm(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Save' }).click();
 }
 
-export function taskCardInColumn(page: Page, columnHeading: string, taskTitle: string) {
+export function taskCardInColumn(
+  page: Page,
+  columnHeading: string,
+  taskTitle: string,
+) {
   return page
     .locator('section')
     .filter({ has: page.getByRole('heading', { name: columnHeading }) })
     .getByRole('listitem')
     .filter({ hasText: taskTitle });
+}
+
+export async function expectLoginHeading(page: Page): Promise<void> {
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Login' }),
+  ).toBeVisible();
+}
+
+export async function expectRegisterHeading(page: Page): Promise<void> {
+  await expect(
+    page.getByRole('heading', { level: 2, name: 'Register' }),
+  ).toBeVisible();
 }

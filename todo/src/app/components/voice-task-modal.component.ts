@@ -12,11 +12,15 @@ import {
   signal,
 } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { TaskApiService } from '../services/task-api.service';
 import { TaskStateService } from '../services/task-state.service';
-import { VoiceTaskService, VoiceProcessResult } from '../services/voice-task.service';
+import { AuthService } from '../services/auth.service';
+import { ToastService } from '../services/toast.service';
+import { VoiceTaskService } from '../services/voice-task.service';
 import { FIBONACCI_ESTIMATES, TaskStatus } from '../models/task.model';
 import { Task } from '../models/task.model';
+import { resolveTaskByTitle } from '../shared/voice-task-resolve';
 
 @Component({
   selector: 'app-voice-task-modal',
@@ -24,10 +28,14 @@ import { Task } from '../models/task.model';
   // File name versioned so dev-server cache reliably picks up direct-edit UI.
   templateUrl: './voice-task-modal.direct-edit.html',
 })
-export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy {
+export class VoiceTaskModalComponent
+  implements OnInit, AfterViewInit, OnDestroy
+{
   private readonly voiceService = inject(VoiceTaskService);
   private readonly taskApi = inject(TaskApiService);
   protected readonly taskState = inject(TaskStateService);
+  private readonly auth = inject(AuthService);
+  private readonly toast = inject(ToastService);
 
   readonly created = output<Task>();
   readonly closed = output<void>();
@@ -38,7 +46,9 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
   protected readonly fibonacciEstimates = FIBONACCI_ESTIMATES;
 
   protected readonly voiceState = computed(() => this.voiceService.state());
-  protected readonly errorMessage = computed(() => this.voiceService.errorMessage());
+  protected readonly errorMessage = computed(() =>
+    this.voiceService.errorMessage(),
+  );
 
   /** Direct-edit form: `edit`, or legacy `preview` from cached bundles (same screen). */
   protected readonly showVoiceEditForm = computed(() => {
@@ -115,8 +125,13 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
     const projectId = this.taskState.activeProjectId();
     if (!projectId || !this.parsedTitle().trim()) return;
 
-    if (this.parsedStatus() === TaskStatus.Doing && this.taskState.workInProgressFull()) {
-      this.submitError.set('Work in progress is full — only one task allowed there. Change status or free the column first.');
+    if (
+      this.parsedStatus() === TaskStatus.Doing &&
+      this.taskState.workInProgressFull()
+    ) {
+      this.submitError.set(
+        'Work in progress is full — only one task allowed there. Change status or free the column first.',
+      );
       return;
     }
 
@@ -139,7 +154,8 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
           this.closed.emit();
         },
         error: (err: unknown) => {
-          const msg = err instanceof Error ? err.message : 'Failed to create task';
+          const msg =
+            err instanceof Error ? err.message : 'Failed to create task';
           this.submitError.set(msg);
           this.submitting.set(false);
         },
@@ -148,7 +164,129 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
 
   private async runProcessing(blob: Blob): Promise<void> {
     try {
-      const result: VoiceProcessResult = await this.voiceService.processAudio(blob);
+      const board = await this.voiceService.processVoiceBoard(blob);
+
+      if (board.kind === 'unclear') {
+        const hint = board.clarification_hint?.trim();
+        this.toast.show(
+          hint ||
+            'Say a command (e.g. filter my tasks) or describe a new task.',
+          'error',
+        );
+        this.voiceService.state.set('idle');
+        this.closed.emit();
+        return;
+      }
+
+      if (board.kind === 'filter_tasks') {
+        const email = this.auth.currentUser()?.email?.trim();
+        if (!email) {
+          this.toast.show('Sign in to filter your tasks.', 'error');
+          this.voiceService.state.set('idle');
+          this.closed.emit();
+          return;
+        }
+        this.taskState.setAssigneeFilterFromSelect(email);
+        this.toast.show('Showing your tasks');
+        this.voiceService.state.set('idle');
+        this.closed.emit();
+        return;
+      }
+
+      if (board.kind === 'assign_task') {
+        const email = this.auth.currentUser()?.email?.trim();
+        if (!email) {
+          this.toast.show('Sign in to assign tasks.', 'error');
+          this.voiceService.state.set('idle');
+          this.closed.emit();
+          return;
+        }
+        const resolved = resolveTaskByTitle(this.taskState.tasks(), board.task);
+        if (!resolved.ok) {
+          if (resolved.reason === 'ambiguous') {
+            const names = resolved.candidates
+              .slice(0, 3)
+              .map((t) => `"${t.title}"`)
+              .join(', ');
+            this.toast.show(
+              `Which task? Try again with the full title. Matches: ${names}`,
+              'error',
+            );
+          } else {
+            this.toast.show(`No task matches "${board.task}".`, 'error');
+          }
+          this.voiceService.state.set('idle');
+          this.closed.emit();
+          return;
+        }
+        try {
+          const updated = await firstValueFrom(
+            this.taskApi.updateTask(resolved.task.id, {
+              assignee_email: email,
+            }),
+          );
+          this.taskState.applyRemoteTaskUpdate(updated);
+          this.toast.show(`Assigned "${updated.title}" to you`);
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Could not assign task';
+          this.toast.show(msg, 'error');
+        }
+        this.voiceService.state.set('idle');
+        this.closed.emit();
+        return;
+      }
+
+      if (board.kind === 'move_task') {
+        const resolved = resolveTaskByTitle(this.taskState.tasks(), board.task);
+        if (!resolved.ok) {
+          if (resolved.reason === 'ambiguous') {
+            const names = resolved.candidates
+              .slice(0, 3)
+              .map((t) => `"${t.title}"`)
+              .join(', ');
+            this.toast.show(
+              `Which task? Try again with the full title. Matches: ${names}`,
+              'error',
+            );
+          } else {
+            this.toast.show(`No task matches "${board.task}".`, 'error');
+          }
+          this.voiceService.state.set('idle');
+          this.closed.emit();
+          return;
+        }
+        const task = resolved.task;
+        const newStatus = board.status;
+        if (
+          newStatus === TaskStatus.Doing &&
+          this.taskState.workInProgressFull() &&
+          task.status !== TaskStatus.Doing
+        ) {
+          this.toast.show(
+            'Work in progress is full — finish or move the current task there first.',
+            'error',
+          );
+          this.voiceService.state.set('idle');
+          this.closed.emit();
+          return;
+        }
+        try {
+          const updated = await firstValueFrom(
+            this.taskApi.updateTask(task.id, { status: newStatus }),
+          );
+          this.taskState.applyRemoteTaskUpdate(updated);
+          this.toast.show(`Moved "${updated.title}"`);
+        } catch (e: unknown) {
+          const msg = e instanceof Error ? e.message : 'Could not move task';
+          this.toast.show(msg, 'error');
+        }
+        this.voiceService.state.set('idle');
+        this.closed.emit();
+        return;
+      }
+
+      // create_task — same review step as before
+      const result = board;
       this.transcript.set(result.transcript);
       this.parsedTitle.set(result.title);
       this.wipLimitHint.set(null);
@@ -157,11 +295,13 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
       if (status === TaskStatus.Doing && this.taskState.workInProgressFull()) {
         status = TaskStatus.Todo;
         this.wipLimitHint.set(
-          'AI suggested Work in progress, but that column already has a task. This draft is set to To do — confirm or edit.'
+          'AI suggested Work in progress, but that column already has a task. This draft is set to To do — confirm or edit.',
         );
       }
       this.parsedStatus.set(status);
-      this.parsedEstimate.set(VoiceTaskModalComponent.parseEstimate(result.estimate));
+      this.parsedEstimate.set(
+        VoiceTaskModalComponent.parseEstimate(result.estimate),
+      );
       this.parsedDescription.set(result.description);
       this.voiceService.logVoiceData({
         task: result.transcript,
@@ -174,7 +314,8 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
       });
       this.voiceService.state.set('edit');
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to process voice';
+      const msg =
+        err instanceof Error ? err.message : 'Failed to process voice';
       this.voiceService.errorMessage.set(msg);
       this.voiceService.state.set('error');
     }
@@ -190,7 +331,8 @@ export class VoiceTaskModalComponent implements OnInit, AfterViewInit, OnDestroy
 
   private static parseEstimate(raw: unknown): number | null {
     if (raw === null || raw === undefined || raw === '') return null;
-    const n = typeof raw === 'number' && Number.isFinite(raw) ? raw : Number(raw);
+    const n =
+      typeof raw === 'number' && Number.isFinite(raw) ? raw : Number(raw);
     if (!Number.isInteger(n) || ![1, 2, 3, 5, 8].includes(n)) return null;
     return n;
   }

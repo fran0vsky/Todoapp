@@ -1,6 +1,18 @@
-import { computed, Injectable, inject, NgZone, OnDestroy, signal } from '@angular/core';
+import {
+  computed,
+  Injectable,
+  inject,
+  NgZone,
+  OnDestroy,
+  signal,
+} from '@angular/core';
 import { from, Observable, Subscription, timer } from 'rxjs';
-import { AuthResponse, User, Session, UserResponse } from '@supabase/supabase-js';
+import {
+  AuthResponse,
+  User,
+  Session,
+  UserResponse,
+} from '@supabase/supabase-js';
 import { getSupabase } from './supabase.client';
 import { ADMIN_EMAIL } from '../shared/admin.config';
 import { map, tap } from 'rxjs/operators';
@@ -29,10 +41,17 @@ export class AuthService implements OnDestroy {
       this.ngZone.run(() => {
         this.currentUser.set(session?.user ?? null);
         if (session) {
-          console.log('[AuthService] Auth state changed: session received.', event, session);
+          console.log(
+            '[AuthService] Auth state changed: session received.',
+            event,
+            session,
+          );
           this.startSessionTimer(session);
         } else {
-          console.log('[AuthService] Auth state changed: no session or logged out.', event);
+          console.log(
+            '[AuthService] Auth state changed: no session or logged out.',
+            event,
+          );
           this.stopSessionTimer();
         }
       });
@@ -43,7 +62,10 @@ export class AuthService implements OnDestroy {
       this.ngZone.run(() => {
         this.currentUser.set(session?.user ?? null);
         if (session) {
-          console.log('[AuthService] Initial session check: session found.', session);
+          console.log(
+            '[AuthService] Initial session check: session found.',
+            session,
+          );
           this.startSessionTimer(session);
         } else {
           console.log('[AuthService] Initial session check: no session.');
@@ -62,20 +84,28 @@ export class AuthService implements OnDestroy {
     const timeoutSeconds = this.SESSION_TIMEOUT_SECONDS;
     const timeoutMs = timeoutSeconds * 1000;
 
-    const supabaseExpiresAt = session.expires_at ? new Date(session.expires_at * 1000).toLocaleString() : 'N/A';
+    const supabaseExpiresAt = session.expires_at
+      ? new Date(session.expires_at * 1000).toLocaleString()
+      : 'N/A';
     const now = new Date().toLocaleString();
 
-    console.log(`[AuthService] Starting session timer for ${timeoutSeconds} seconds.`);
+    console.log(
+      `[AuthService] Starting session timer for ${timeoutSeconds} seconds.`,
+    );
     console.log(`[AuthService] Current time: ${now}`);
-    console.log(`[AuthService] Supabase session (JWT) expires at: ${supabaseExpiresAt} (in ${session.expires_in} seconds).`);
+    console.log(
+      `[AuthService] Supabase session (JWT) expires at: ${supabaseExpiresAt} (in ${session.expires_in} seconds).`,
+    );
     console.log(`[AuthService] User: ${session.user?.email}`);
 
     this.sessionTimerSubscription = timer(timeoutMs)
       .pipe(
         tap(() => {
-          console.log('[AuthService] --- Client-side timer triggered. Initiating logout. ---');
+          console.log(
+            '[AuthService] --- Client-side timer triggered. Initiating logout. ---',
+          );
           this.ngZone.run(() => this.signOutAndRedirect());
-        })
+        }),
       )
       .subscribe(() => {
         console.log('[AuthService] Timer subscription completed.');
@@ -85,7 +115,10 @@ export class AuthService implements OnDestroy {
   }
 
   private stopSessionTimer(): void {
-    if (this.sessionTimerSubscription && !this.sessionTimerSubscription.closed) {
+    if (
+      this.sessionTimerSubscription &&
+      !this.sessionTimerSubscription.closed
+    ) {
       this.sessionTimerSubscription.unsubscribe();
       this.sessionTimerSubscription = null;
       console.log('[AuthService] Session timer stopped via unsubscribe.');
@@ -96,23 +129,27 @@ export class AuthService implements OnDestroy {
 
   signUp(email: string, password: string): Observable<AuthResponse> {
     return from(getSupabase().auth.signUp({ email, password })).pipe(
-      tap(response => {
-        if (response.data.session) {
+      tap((response) => {
+        const session = response.data.session;
+        if (session) {
           console.log('[AuthService] Sign up successful. Starting timer.');
-          this.ngZone.run(() => this.startSessionTimer(response.data.session!));
+          this.ngZone.run(() => this.startSessionTimer(session));
         }
-      })
+      }),
     );
   }
 
   signIn(email: string, password: string): Observable<AuthResponse> {
-    return from(getSupabase().auth.signInWithPassword({ email, password })).pipe(
-      tap(response => {
-        if (response.data.session) {
+    return from(
+      getSupabase().auth.signInWithPassword({ email, password }),
+    ).pipe(
+      tap((response) => {
+        const session = response.data.session;
+        if (session) {
           console.log('[AuthService] Sign in successful. Starting timer.');
-          this.ngZone.run(() => this.startSessionTimer(response.data.session!));
+          this.ngZone.run(() => this.startSessionTimer(session));
         }
-      })
+      }),
     );
   }
 
@@ -143,7 +180,7 @@ export class AuthService implements OnDestroy {
     return from(
       getSupabase().auth.updateUser({
         data: { [NICKNAME_META_KEY]: trimmed.length > 0 ? trimmed : null },
-      })
+      }),
     ).pipe(
       map((res) => {
         if (res.error) throw res.error;
@@ -151,21 +188,28 @@ export class AuthService implements OnDestroy {
           this.ngZone.run(() => this.currentUser.set(res.data.user));
         }
         return res;
-      })
+      }),
     );
   }
 
   signOutAndRedirect(): void {
-    console.log('[AuthService] signOutAndRedirect: Attempting to sign out and navigate.');
+    console.log(
+      '[AuthService] signOutAndRedirect: Attempting to sign out and navigate.',
+    );
     this.signOut().subscribe({
       next: () => {
-        console.log('[AuthService] signOutAndRedirect: Sign out successful. Navigating to /login.');
+        console.log(
+          '[AuthService] signOutAndRedirect: Sign out successful. Navigating to /login.',
+        );
         this.router.navigate(['/login']);
       },
       error: (err) => {
-        console.error('[AuthService] signOutAndRedirect: Error during sign out:', err);
+        console.error(
+          '[AuthService] signOutAndRedirect: Error during sign out:',
+          err,
+        );
         this.router.navigate(['/login']); // Still attempt to navigate to unblock
-      }
+      },
     });
   }
 }

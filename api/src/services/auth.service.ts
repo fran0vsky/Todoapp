@@ -19,6 +19,8 @@ export async function getUserFromBearer(req: Request): Promise<User | null> {
 }
 
 export function isAdmin(user: User): boolean {
-  const adminEmail = (process.env['ADMIN_EMAIL'] ?? 'admin@admin.com').trim().toLowerCase();
+  const adminEmail = (process.env['ADMIN_EMAIL'] ?? 'admin@admin.com')
+    .trim()
+    .toLowerCase();
   return user.email?.trim().toLowerCase() === adminEmail;
 }

@@ -12,6 +12,25 @@ export interface VoiceProcessResult {
   description: string;
 }
 
+export type VoiceBoardResponse =
+  | {
+      kind: 'create_task';
+      transcript: string;
+      title: string;
+      status: TaskStatus;
+      estimate: number | null;
+      description: string;
+    }
+  | { kind: 'filter_tasks'; transcript: string }
+  | {
+      kind: 'move_task';
+      transcript: string;
+      task: string;
+      status: TaskStatus;
+    }
+  | { kind: 'assign_task'; transcript: string; task: string }
+  | { kind: 'unclear'; transcript: string; clarification_hint: string | null };
+
 export interface VoiceLogPayload {
   task: string;
   expected: {
@@ -35,6 +54,7 @@ export type VoiceRecordingState =
 export class VoiceTaskService {
   private readonly http = inject(HttpClient);
   private readonly voiceUrl = `${API_BASE_URL}/api/voice/process`;
+  private readonly voiceBoardUrl = `${API_BASE_URL}/api/voice/board`;
   private readonly voiceLogUrl = `${API_BASE_URL}/api/voice/log`;
 
   private mediaRecorder: MediaRecorder | null = null;
@@ -72,13 +92,17 @@ export class VoiceTaskService {
       this.teardownCapture();
       this._pendingBlob = null;
       this.chunks = [];
-      this.mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      this.mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
 
       this.audioContext = new AudioContext();
       if (this.audioContext.state === 'suspended') {
         await this.audioContext.resume();
       }
-      const source = this.audioContext.createMediaStreamSource(this.mediaStream);
+      const source = this.audioContext.createMediaStreamSource(
+        this.mediaStream,
+      );
 
       this.analyserNode = this.audioContext.createAnalyser();
       this.analyserNode.fftSize = 256;
@@ -145,7 +169,7 @@ export class VoiceTaskService {
 
     try {
       const result = await firstValueFrom(
-        this.http.post<VoiceProcessResult>(this.voiceUrl, formData)
+        this.http.post<VoiceProcessResult>(this.voiceUrl, formData),
       );
       return result;
     } catch (err: unknown) {
@@ -153,9 +177,97 @@ export class VoiceTaskService {
     }
   }
 
+  /** Transcribe + classify: task creation vs board commands. */
+  async processVoiceBoard(blob: Blob): Promise<VoiceBoardResponse> {
+    this.state.set('processing');
+
+    const formData = new FormData();
+    formData.append('audio', blob, 'recording.webm');
+
+    try {
+      const raw = await firstValueFrom(
+        this.http.post<Record<string, unknown>>(this.voiceBoardUrl, formData),
+      );
+      return this.normalizeVoiceBoardResponse(raw);
+    } catch (err: unknown) {
+      throw new Error(this.httpErrorToMessage(err));
+    }
+  }
+
+  private normalizeVoiceBoardResponse(
+    raw: Record<string, unknown>,
+  ): VoiceBoardResponse {
+    const kind = raw['kind'];
+    const transcript =
+      typeof raw['transcript'] === 'string' ? raw['transcript'] : '';
+
+    if (kind === 'filter_tasks') {
+      return { kind: 'filter_tasks', transcript };
+    }
+    if (kind === 'unclear') {
+      const hint =
+        typeof raw['clarification_hint'] === 'string'
+          ? raw['clarification_hint']
+          : null;
+      return { kind: 'unclear', transcript, clarification_hint: hint };
+    }
+    if (kind === 'assign_task') {
+      const task = typeof raw['task'] === 'string' ? raw['task'] : '';
+      return { kind: 'assign_task', transcript, task };
+    }
+    if (kind === 'move_task') {
+      const task = typeof raw['task'] === 'string' ? raw['task'] : '';
+      const st = raw['status'];
+      const status =
+        st === TaskStatus.Todo ||
+        st === TaskStatus.Doing ||
+        st === TaskStatus.Done
+          ? st
+          : TaskStatus.Todo;
+      return { kind: 'move_task', transcript, task, status };
+    }
+    if (kind === 'create_task') {
+      const title = typeof raw['title'] === 'string' ? raw['title'] : '';
+      const description =
+        typeof raw['description'] === 'string' ? raw['description'] : '';
+      const st = raw['status'];
+      const status =
+        st === TaskStatus.Todo ||
+        st === TaskStatus.Doing ||
+        st === TaskStatus.Done
+          ? st
+          : TaskStatus.Todo;
+      const est = raw['estimate'];
+      const estimate =
+        est === null || est === undefined || est === ''
+          ? null
+          : typeof est === 'number' && Number.isFinite(est)
+            ? est
+            : Number(est);
+      const estimateOk =
+        estimate !== null &&
+        Number.isInteger(estimate) &&
+        [1, 2, 3, 5, 8].includes(estimate)
+          ? estimate
+          : null;
+      return {
+        kind: 'create_task',
+        transcript,
+        title,
+        status,
+        estimate: estimateOk,
+        description,
+      };
+    }
+
+    throw new Error('Unexpected voice board response');
+  }
+
   /** Appends one JSONL line when `VOICE_DATA_LOG_PATH` is set on the API (otherwise server no-ops). */
   logVoiceData(payload: VoiceLogPayload): void {
-    this.http.post(this.voiceLogUrl, payload).subscribe({ error: () => undefined });
+    this.http
+      .post(this.voiceLogUrl, payload)
+      .subscribe({ error: () => undefined });
   }
 
   cleanup(): void {

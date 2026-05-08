@@ -1,0 +1,555 @@
+import OpenAI from 'npm:openai@4';
+import { encodeBase64 } from 'jsr:@std/encoding@1.0.10/base64';
+import { isTaskStatus } from './validation.ts';
+
+const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
+
+function openRouterTranscriptionModels(): string[] {
+  const fromEnv = Deno.env.get('OPENROUTER_TRANSCRIPTION_MODEL')?.trim();
+  const defaults = ['openai/gpt-4o', 'google/gemini-2.0-flash-001'];
+  if (fromEnv) {
+    return [fromEnv, ...defaults.filter((m) => m !== fromEnv)];
+  }
+  return defaults;
+}
+
+function sanitizeUpstreamError(body: string, status: number): string {
+  const trimmed = body.trim();
+  if (/^<!DOCTYPE html/i.test(trimmed) || /<html[\s>]/i.test(trimmed)) {
+    return `Speech service returned HTTP ${status} (HTML error). OpenRouter's /audio/transcriptions route is unreliable — this app uses chat + audio instead; if it still fails, add OPENAI_API_KEY for Whisper.`;
+  }
+  try {
+    const j = JSON.parse(trimmed) as { error?: { message?: string } };
+    if (typeof j.error?.message === 'string' && j.error.message.trim()) return j.error.message.trim();
+  } catch {
+    /* not JSON */
+  }
+  if (trimmed.length > 280) {
+    return `Speech service error (HTTP ${status}): ${trimmed.slice(0, 200)}…`;
+  }
+  return trimmed || `Speech service error (HTTP ${status})`;
+}
+
+export function clipErrorForClient(message: string, maxLen = 500): string {
+  const m = message.trim();
+  if (/^<!DOCTYPE html/i.test(m) || (m.includes('<html') && m.length > 400)) {
+    return 'Speech recognition failed (the provider returned an error page). Add OPENAI_API_KEY for OpenAI Whisper, or try again later.';
+  }
+  return m.length > maxLen ? `${m.slice(0, maxLen)}…` : m;
+}
+
+function mimeToOpenRouterAudioFormat(mimetype: string): string {
+  const m = (mimetype || '').toLowerCase();
+  if (m.includes('wav')) return 'wav';
+  if (m.includes('mp3') || m.includes('mpeg')) return 'mp3';
+  if (m.includes('mp4') || m.includes('m4a')) return 'm4a';
+  if (m.includes('flac')) return 'flac';
+  if (m.includes('aac')) return 'aac';
+  if (m.includes('aiff')) return 'aiff';
+  if (m.includes('ogg')) return 'ogg';
+  if (m.includes('webm')) return 'ogg';
+  return 'ogg';
+}
+
+function extractMessageText(content: unknown): string {
+  if (typeof content === 'string') return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => {
+        if (part && typeof part === 'object' && 'text' in part) {
+          return String((part as { text: unknown }).text ?? '');
+        }
+        return '';
+      })
+      .join('');
+  }
+  return '';
+}
+
+function openRouterHeaders(): Record<string, string> {
+  const referer =
+    Deno.env.get('OPENROUTER_HTTP_REFERER')?.trim() || 'http://localhost:4200';
+  return {
+    'HTTP-Referer': referer,
+    'X-Title': 'Todoapp Voice',
+  };
+}
+
+async function transcribeOpenRouterWithModel(
+  buffer: Uint8Array,
+  mimetype: string,
+  model: string
+): Promise<string> {
+  const key = getOpenRouterKey();
+  const b64 = encodeBase64(buffer);
+  const format = mimeToOpenRouterAudioFormat(mimetype);
+
+  const body = JSON.stringify({
+    model,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Transcribe the speech in this audio. Reply with only the spoken words, no preamble or quotes.',
+          },
+          {
+            type: 'input_audio',
+            input_audio: {
+              data: b64,
+              format,
+            },
+          },
+        ],
+      },
+    ],
+    temperature: 0,
+  });
+
+  let lastErr: Error | null = null;
+  for (let attempt = 1; attempt <= OPENROUTER_TRANSCRIBE_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          ...openRouterHeaders(),
+        },
+        body,
+      });
+
+      const rawText = await res.text();
+      if (!res.ok) {
+        throw new Error(sanitizeUpstreamError(rawText, res.status));
+      }
+
+      let data: unknown;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(sanitizeUpstreamError(rawText, res.status));
+      }
+
+      const d = data as {
+        error?: { message?: string };
+        choices?: Array<{ message?: { content?: unknown } }>;
+      };
+      if (d.error?.message) {
+        throw new Error(d.error.message);
+      }
+
+      const text = extractMessageText(d.choices?.[0]?.message?.content).trim();
+      return text;
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+      const transient = isTransientUpstreamError(lastErr.message);
+      if (!transient || attempt === OPENROUTER_TRANSCRIBE_ATTEMPTS) {
+        throw lastErr;
+      }
+      await delay(OPENROUTER_TRANSCRIBE_RETRY_DELAY_MS * attempt);
+    }
+  }
+
+  throw lastErr ?? new Error('OpenRouter transcription failed');
+}
+
+function isTransientUpstreamError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('aborted') ||
+    m.includes('abort') ||
+    m.includes('timeout') ||
+    m.includes('econnreset') ||
+    m.includes('econnrefused') ||
+    m.includes('socket hang up') ||
+    m.includes('fetch failed') ||
+    m.includes('network error') ||
+    m.includes('ecanceled') ||
+    m.includes('eai_again')
+  );
+}
+
+function shouldTryNextOpenRouterModel(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('input audio') ||
+    m.includes('no endpoints') ||
+    m.includes('does not support') ||
+    m.includes('modality') ||
+    isTransientUpstreamError(message)
+  );
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const OPENROUTER_TRANSCRIBE_ATTEMPTS = 3;
+const OPENROUTER_TRANSCRIBE_RETRY_DELAY_MS = 600;
+
+async function transcribeViaOpenRouterChat(buffer: Uint8Array, mimetype: string): Promise<string> {
+  const models = openRouterTranscriptionModels();
+  let lastError: Error | null = null;
+  for (const model of models) {
+    try {
+      return await transcribeOpenRouterWithModel(buffer, mimetype, model);
+    } catch (e) {
+      lastError = e instanceof Error ? e : new Error(String(e));
+      if (!shouldTryNextOpenRouterModel(lastError.message) || models.indexOf(model) === models.length - 1) {
+        throw lastError;
+      }
+    }
+  }
+  throw lastError ?? new Error('OpenRouter transcription failed');
+}
+
+async function transcribeOpenAIWhisper(
+  buffer: Uint8Array,
+  mimetype: string,
+  openaiKey: string
+): Promise<string> {
+  const extension = mimetype.includes('webm')
+    ? 'webm'
+    : mimetype.includes('mp4') || mimetype.includes('m4a')
+      ? 'mp4'
+      : mimetype.includes('ogg')
+        ? 'ogg'
+        : mimetype.includes('wav')
+          ? 'wav'
+          : 'webm';
+  const openai = new OpenAI({ apiKey: openaiKey });
+  const file = uint8ToFile(buffer, `audio.${extension}`, mimetype || 'audio/webm');
+  const response = await openai.audio.transcriptions.create({
+    model: 'whisper-1',
+    file,
+  });
+  return response.text;
+}
+
+function getOpenRouterKey(): string {
+  const key = Deno.env.get('OPENROUTER_API_KEY');
+  if (!key) throw new Error('OPENROUTER_API_KEY is not set');
+  return key;
+}
+
+function uint8ToFile(buffer: Uint8Array, filename: string, mimetype: string): File {
+  return new File([buffer], filename, { type: mimetype });
+}
+
+async function transcribeAudio(buffer: Uint8Array, mimetype: string): Promise<string> {
+  const openaiKey = Deno.env.get('OPENAI_API_KEY')?.trim();
+
+  if (openaiKey) {
+    try {
+      return await transcribeOpenAIWhisper(buffer, mimetype, openaiKey);
+    } catch (wErr: unknown) {
+      const wMsg = wErr instanceof Error ? wErr.message : String(wErr);
+      try {
+        return await transcribeViaOpenRouterChat(buffer, mimetype);
+      } catch {
+        throw new Error(
+          `Whisper failed (${wMsg}). OpenRouter audio also failed. Check OPENAI_API_KEY billing and OpenRouter models with audio input.`
+        );
+      }
+    }
+  }
+
+  try {
+    return await transcribeViaOpenRouterChat(buffer, mimetype);
+  } catch (orErr: unknown) {
+    const detail = orErr instanceof Error ? orErr.message : 'OpenRouter transcription failed';
+    throw new Error(
+      `${detail} Add OPENAI_API_KEY for OpenAI Whisper (recommended for WebM), or set OPENROUTER_TRANSCRIPTION_MODEL to a model listed under audio input on openrouter.ai/models.`
+    );
+  }
+}
+
+interface ParsedTask {
+  title: string;
+  status: 'todo' | 'doing' | 'done';
+  estimate: number | null;
+  description: string;
+}
+
+async function parseTranscriptToTask(transcript: string): Promise<ParsedTask> {
+  const key = getOpenRouterKey();
+
+  const client = new OpenAI({
+    apiKey: key,
+    baseURL: OPENROUTER_BASE_URL,
+    defaultHeaders: openRouterHeaders(),
+  });
+
+  const systemPrompt = `You are a software project manager receiving a voice note from a developer.
+Your job is NOT to transcribe — it IS to produce a well-formed task card from what they said.
+
+Respond ONLY with valid JSON, no markdown, no explanation. Shape:
+{"title":"...","status":"todo"|"doing"|"done","estimate":1|2|3|5|8|null,"description":"..."}
+
+Rules:
+- title: imperative phrase, max 60 characters, no filler ("so I need to", "basically", "um"). Name the outcome, not the ramble.
+- description: 1–3 short sentences: context, scope, and acceptance-style detail. Write what must be done in clear technical language — not a verbatim quote of the voice note. Use empty string "" only if there is truly nothing beyond the title.
+- status: "todo" | "doing" | "done" — infer carefully from how the speaker frames the work:
+  Use "doing" when they signal active work on this item, including phrases like: "I'm working on", "I'm currently working on", "currently developing", "I'm building", "already started", "already working on this", "in progress", "actively developing", "halfway through", "midway", "started on", "deep into", "still implementing" — even if they also describe what the thing is (e.g. "create a task for the weather app I'm currently working on" → status "doing" because they are actively on it).
+  Use "done" when the work is finished or they treat it as complete — not only past tense but also "already": "finished", "done with", "completed", "shipped", "wrapped up", "merged", "landed", "it's live", "already done", "already complete", "already finished", "already created", "already built", "already implemented", "that's done", "this is complete", "nothing left to do", "checked in", "deployed", "released". If they ask to log or record something they already finished, use "done" so it belongs in the Done column.
+  If both "still working" and "done" cues appear, prefer the clearest recent intent; when unclear, default "todo".
+  Default "todo" only when it sounds like a new/backlog item with no active-work or completion language.
+- estimate: Fibonacci story points 1, 2, 3, 5, or 8 from apparent complexity (always pick one number; avoid null unless the transcript is empty of substance):
+  1 = trivial (rename, toggle, copy-paste)
+  2 = small (single file, obvious fix)
+  3 = medium (several files, some thinking) — default when unclear
+  5 = large (cross-cutting, integration, unclear edges)
+  8 = very large (multi-day, migration, heavy unknowns)
+  Use cues: "quick/simple/trivial" → lower; "refactor/migrate/investigate/architecture" → higher.
+
+Examples:
+{"title":"Add GitHub Actions CI for PR tests","status":"todo","estimate":3,"description":"Wire Node 20 in Actions. Run the test suite on every pull request. Fail the job on test or lint errors."}
+{"title":"Build weather app MVP","status":"doing","estimate":5,"description":"User is actively developing the weather app. Capture remaining feature work and polish before release."}
+{"title":"Document login API in README","status":"done","estimate":2,"description":"Speaker reports this is already written and merged. Task records completed documentation work for the login endpoints."}`;
+
+  const response = await client.chat.completions.create({
+    model: 'anthropic/claude-sonnet-4-5',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: transcript },
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.4,
+  });
+
+  let raw = response.choices[0]?.message?.content ?? '{}';
+  raw = raw.trim();
+  const jsonBlock = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonBlock?.[1]) raw = jsonBlock[1].trim();
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    throw new Error('AI returned invalid JSON for task fields');
+  }
+
+  const title = typeof parsed['title'] === 'string' ? parsed['title'].trim() : '';
+  const rawStatus = parsed['status'];
+  const status = isTaskStatus(rawStatus) ? rawStatus : 'todo';
+  const rawEst = parsed['estimate'];
+  const validEstimates = [1, 2, 3, 5, 8];
+  let estimate =
+    typeof rawEst === 'number' && validEstimates.includes(rawEst) ? rawEst : null;
+  if (estimate === null && title) {
+    estimate = 3;
+  }
+  const description =
+    typeof parsed['description'] === 'string' ? parsed['description'].trim() : '';
+
+  return { title, status, estimate, description };
+}
+
+const VOICE_INTENT_MODEL_DEFAULT = 'anthropic/claude-sonnet-4-5';
+
+function voiceIntentModel(): string {
+  return Deno.env.get('OPENROUTER_VOICE_INTENT_MODEL')?.trim() || VOICE_INTENT_MODEL_DEFAULT;
+}
+
+type BoardIntentKind = 'filter_tasks' | 'move_task' | 'assign_task' | 'create_task' | 'unclear';
+
+interface RawBoardIntent {
+  intent: BoardIntentKind;
+  task: string | null;
+  status: string | null;
+  clarification_hint: string | null;
+}
+
+function normalizeSpokenStatus(raw: string | null | undefined): 'todo' | 'doing' | 'done' | null {
+  if (raw == null || typeof raw !== 'string') return null;
+  const s = raw.trim().toLowerCase();
+  if (!s) return null;
+  if (/\b(done|complete|completed|shipped|finished)\b/.test(s) || s === 'done') return 'done';
+  if (
+    /\b(in\s+progress|work\s+in\s+progress|wip|doing|active|started)\b/.test(s) ||
+    s === 'doing'
+  ) {
+    return 'doing';
+  }
+  if (/\b(to\s*do|backlog|todo|icebox)\b/.test(s) || s === 'todo') return 'todo';
+  return null;
+}
+
+async function parseTranscriptToBoardIntent(transcript: string): Promise<RawBoardIntent> {
+  const key = getOpenRouterKey();
+  const client = new OpenAI({
+    apiKey: key,
+    baseURL: OPENROUTER_BASE_URL,
+    defaultHeaders: openRouterHeaders(),
+  });
+
+  const systemPrompt = `You classify spoken commands for a task board app.
+
+Respond ONLY with valid JSON, no markdown. Shape:
+{"intent":"filter_tasks"|"move_task"|"assign_task"|"create_task"|"unclear","task":string|null,"status":string|null,"clarification_hint":string|null}
+
+Rules:
+- intent "filter_tasks": user wants to see only their tasks / filter by current user (e.g. "filter my tasks", "show my tasks", "only tasks assigned to me"). task and status must be null.
+- intent "move_task": user wants to change a task's column. Put the task name or fragment they said in "task" (never invent). Put the target column they said in "status" as free text (e.g. "In Progress", "Done", "To do"). If task or target column is missing, use intent "unclear" and a short clarification_hint.
+- intent "assign_task": user assigns a task to themselves ("assign X to me", "give task Y to me"). Put task fragment in "task". status null.
+- intent "create_task": user is describing NEW work to add as a card (e.g. "add a task to fix login", "remind me to update docs", "I need a task for API tests"). NOT a board command.
+- intent "unclear": greeting, noise, unrelated, or ambiguous. Optional clarification_hint in plain English.
+
+Disambiguation:
+- "Move X to in progress" → move_task with task "X", status "in progress"
+- "Create a task to move the button" → create_task (new work, not move_task)
+- Commands that mention an existing task title + destination column → move_task
+
+Examples:
+{"intent":"filter_tasks","task":null,"status":null,"clarification_hint":null}
+{"intent":"move_task","task":"Login bug","status":"Work in progress","clarification_hint":null}
+{"intent":"assign_task","task":"API docs","status":null,"clarification_hint":null}
+{"intent":"create_task","task":null,"status":null,"clarification_hint":null}
+{"intent":"unclear","task":null,"status":null,"clarification_hint":"Say which task and which column."}`;
+
+  const response = await client.chat.completions.create({
+    model: voiceIntentModel(),
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: transcript },
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.2,
+  });
+
+  let raw = response.choices[0]?.message?.content ?? '{}';
+  raw = raw.trim();
+  const jsonBlock = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonBlock?.[1]) raw = jsonBlock[1].trim();
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return {
+      intent: 'unclear',
+      task: null,
+      status: null,
+      clarification_hint: 'Could not parse intent',
+    };
+  }
+
+  const intentRaw = parsed['intent'];
+  const intent: BoardIntentKind =
+    intentRaw === 'filter_tasks' ||
+    intentRaw === 'move_task' ||
+    intentRaw === 'assign_task' ||
+    intentRaw === 'create_task' ||
+    intentRaw === 'unclear'
+      ? intentRaw
+      : 'unclear';
+
+  const task = typeof parsed['task'] === 'string' ? parsed['task'].trim() || null : null;
+  const status = typeof parsed['status'] === 'string' ? parsed['status'].trim() || null : null;
+  const clarification_hint =
+    typeof parsed['clarification_hint'] === 'string'
+      ? parsed['clarification_hint'].trim() || null
+      : null;
+
+  return { intent, task, status, clarification_hint };
+}
+
+export async function handleVoiceBoard(audio: Uint8Array, mimetype: string): Promise<Record<string, unknown>> {
+  const transcript = await transcribeAudio(audio, mimetype);
+
+  if (!transcript.trim()) {
+    return { __error: 422, __body: { error: 'No speech detected in the audio' } };
+  }
+
+  const classified = await parseTranscriptToBoardIntent(transcript);
+
+  if (classified.intent === 'create_task') {
+    const parsed = await parseTranscriptToTask(transcript);
+    if (!parsed.title) {
+      return {
+        __error: 422,
+        __body: { error: 'Could not extract a task title from the transcript' },
+      };
+    }
+    return {
+      kind: 'create_task',
+      transcript,
+      title: parsed.title,
+      status: parsed.status,
+      estimate: parsed.estimate,
+      description: parsed.description,
+    };
+  }
+
+  if (classified.intent === 'filter_tasks') {
+    return { kind: 'filter_tasks', transcript };
+  }
+
+  if (classified.intent === 'assign_task') {
+    if (!classified.task?.trim()) {
+      return {
+        kind: 'unclear',
+        transcript,
+        clarification_hint:
+          classified.clarification_hint ?? 'Say which task to assign to you.',
+      };
+    }
+    return {
+      kind: 'assign_task',
+      transcript,
+      task: classified.task.trim(),
+    };
+  }
+
+  if (classified.intent === 'move_task') {
+    const mapped = normalizeSpokenStatus(classified.status);
+    if (!classified.task?.trim() || !mapped) {
+      return {
+        kind: 'unclear',
+        transcript,
+        clarification_hint:
+          classified.clarification_hint ??
+          (!classified.task?.trim()
+            ? 'Say which task to move.'
+            : 'Say which column (To do, Work in progress, or Done).'),
+      };
+    }
+    return {
+      kind: 'move_task',
+      transcript,
+      task: classified.task.trim(),
+      status: mapped,
+    };
+  }
+
+  return {
+    kind: 'unclear',
+    transcript,
+    clarification_hint: classified.clarification_hint,
+  };
+}
+
+export async function handleVoiceProcess(audio: Uint8Array, mimetype: string): Promise<Record<string, unknown>> {
+  const transcript = await transcribeAudio(audio, mimetype);
+
+  if (!transcript.trim()) {
+    return { __error: 422, __body: { error: 'No speech detected in the audio' } };
+  }
+
+  const parsed = await parseTranscriptToTask(transcript);
+
+  if (!parsed.title) {
+    return {
+      __error: 422,
+      __body: { error: 'Could not extract a task title from the transcript' },
+    };
+  }
+
+  return { transcript, ...parsed };
+}
+
+/** Multer-compatible: audio field + audio/ mimetype */
+export function isAudioMimetype(mimetype: string): boolean {
+  return mimetype.startsWith('audio/') || mimetype === 'application/octet-stream';
+}

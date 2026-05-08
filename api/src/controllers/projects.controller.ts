@@ -8,7 +8,10 @@ import {
   listProjects,
 } from '../services/projects.service';
 
-export async function getProjectList(_req: Request, res: Response): Promise<void> {
+export async function getProjectList(
+  _req: Request,
+  res: Response,
+): Promise<void> {
   const { data, error } = await listProjects();
   if (error) {
     res.status(500).json({ error: error.message });
@@ -17,7 +20,10 @@ export async function getProjectList(_req: Request, res: Response): Promise<void
   res.json(data);
 }
 
-export async function getProjectByIdParam(req: Request, res: Response): Promise<void> {
+export async function getProjectByIdParam(
+  req: Request,
+  res: Response,
+): Promise<void> {
   const id = Number(req.params['id']);
   if (!Number.isInteger(id) || id <= 0) {
     res.status(400).json({ error: 'invalid project id' });
@@ -50,7 +56,10 @@ export async function postProject(req: Request, res: Response): Promise<void> {
   res.status(201).json(data);
 }
 
-export async function deleteProject(req: Request, res: Response): Promise<void> {
+export async function deleteProject(
+  req: Request,
+  res: Response,
+): Promise<void> {
   const user = await getUserFromBearer(req);
   if (!user) {
     res.status(401).json({ error: 'authorization required' });

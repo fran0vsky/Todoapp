@@ -2,13 +2,14 @@ name: CI
 
 on:
   push:
-    branches: [main]
   pull_request:
-    branches: [main]
 
 jobs:
-  build:
+  verify:
     runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+
     steps:
       - uses: actions/checkout@v4
 
@@ -20,5 +21,27 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build API and Angular app
+      - name: ESLint (Nx lint)
+        run: npm run lint
+
+      - name: Prettier
+        run: npm run format:check
+
+      - name: Vitest (todo) with coverage
+        run: npm run test
+
+      - name: Build
         run: npx nx run-many -t build --projects=api,todo
+
+      - name: Install Playwright Chromium (with OS deps)
+        run: npx playwright install --with-deps chromium
+
+      - name: E2E (public project)
+        run: npx nx run todo-e2e:e2e -- --project=chromium-public
+
+      - name: E2E (authenticated flows)
+        if: ${{ secrets.E2E_EMAIL != '' && secrets.E2E_PASSWORD != '' }}
+        env:
+          E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+          E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+        run: npx nx run todo-e2e:e2e -- --project=setup --project=chromium

@@ -18,7 +18,12 @@ import {
   postTask,
 } from './controllers/tasks.controller';
 import { getUsers } from './controllers/users.controller';
-import { audioUpload, postVoiceLog, postVoiceProcess } from './controllers/voice.controller';
+import {
+  audioUpload,
+  postVoiceBoard,
+  postVoiceLog,
+  postVoiceProcess,
+} from './controllers/voice.controller';
 
 const app = express();
 const port = process.env['PORT'] ?? 3333;
@@ -65,6 +70,7 @@ app.delete('/api/tasks/:id', deleteTask);
 // ---------- VOICE ----------
 
 app.post('/api/voice/process', audioUpload.single('audio'), postVoiceProcess);
+app.post('/api/voice/board', audioUpload.single('audio'), postVoiceBoard);
 app.post('/api/voice/log', postVoiceLog);
 
 app.listen(port, () => {

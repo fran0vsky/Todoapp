@@ -3,14 +3,21 @@
 
   <header class="mb-8">
     <h1 class="text-2xl font-semibold text-white tracking-tight">Projects</h1>
-    <p class="text-neutral-500 text-sm mt-1">Open a board or create a new project (starts with no tasks).</p>
+    <p class="text-neutral-500 text-sm mt-1">
+      Open a board or create a new project (starts with no tasks).
+    </p>
   </header>
 
   <section
     class="rounded-xl border border-neutral-800 bg-neutral-950/60 p-4 md:p-5 mb-8"
     aria-labelledby="new-project-heading"
   >
-    <h2 id="new-project-heading" class="text-neutral-300 text-sm font-medium mb-3">New project</h2>
+    <h2
+      id="new-project-heading"
+      class="text-neutral-300 text-sm font-medium mb-3"
+    >
+      New project
+    </h2>
     <div class="flex flex-col sm:flex-row gap-3 sm:items-end">
       <div class="flex-1 min-w-0">
         <label for="new-project-name" class="sr-only">Project name</label>
@@ -44,7 +51,9 @@
       <span>Loading projects…</span>
     </div>
   } @else if (projects().length === 0) {
-    <p class="text-neutral-500 text-sm text-center py-12 border border-dashed border-neutral-800 rounded-xl">
+    <p
+      class="text-neutral-500 text-sm text-center py-12 border border-dashed border-neutral-800 rounded-xl"
+    >
       No projects yet. Add a name above to create one.
     </p>
   } @else {
@@ -53,7 +62,9 @@
         <li
           class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-neutral-800 bg-neutral-900/80 px-4 py-3 hover:border-neutral-700 transition-colors"
         >
-          <span class="text-neutral-100 font-medium min-w-0 break-words">{{ project.name }}</span>
+          <span class="text-neutral-100 font-medium min-w-0 break-words">{{
+            project.name
+          }}</span>
           <div class="flex items-center gap-2 shrink-0">
             <span
               class="inline-flex"
@@ -66,9 +77,12 @@
               <button
                 type="button"
                 (click)="deleteProject(project, $event)"
-                [disabled]="!authService.isAdmin() || deletingId() === project.id"
+                [disabled]="
+                  !authService.isAdmin() || deletingId() === project.id
+                "
                 [ngClass]="{
-                  'border-red-900/50 text-red-300/95 hover:bg-red-950/35': authService.isAdmin(),
+                  'border-red-900/50 text-red-300/95 hover:bg-red-950/35':
+                    authService.isAdmin(),
                   'border-neutral-800 text-neutral-600': !authService.isAdmin(),
                 }"
                 class="inline-flex h-9 w-9 items-center justify-center rounded-lg border transition-colors focus:outline-none focus:ring-2 focus:ring-red-400/30 disabled:cursor-not-allowed disabled:opacity-50"

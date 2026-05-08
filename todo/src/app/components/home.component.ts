@@ -1,4 +1,11 @@
-import { Component, computed, inject, OnDestroy, OnInit, signal } from '@angular/core';
+import {
+  Component,
+  computed,
+  inject,
+  OnDestroy,
+  OnInit,
+  signal,
+} from '@angular/core';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
 import { EMPTY, Subject, switchMap, takeUntil } from 'rxjs';
 import { TaskFormModalComponent } from './task-form-modal.component';
@@ -75,7 +82,7 @@ export class HomeComponent implements OnInit, OnDestroy {
             return EMPTY;
           }
           return this.projectApi.getProject(id);
-        })
+        }),
       )
       .subscribe({
         next: (project) => {

@@ -27,7 +27,8 @@ function sanitizeUpstreamError(body: string, status: number): string {
   }
   try {
     const j = JSON.parse(trimmed) as { error?: { message?: string } };
-    if (typeof j.error?.message === 'string' && j.error.message.trim()) return j.error.message.trim();
+    if (typeof j.error?.message === 'string' && j.error.message.trim())
+      return j.error.message.trim();
   } catch {
     /* not JSON */
   }
@@ -81,66 +82,98 @@ function extractMessageText(content: unknown): string {
 async function transcribeOpenRouterWithModel(
   buffer: Buffer,
   mimetype: string,
-  model: string
+  model: string,
 ): Promise<string> {
   const key = getOpenRouterKey();
   const b64 = buffer.toString('base64');
   const format = mimeToOpenRouterAudioFormat(mimetype);
 
-  const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${key}`,
-      'Content-Type': 'application/json',
-      'HTTP-Referer': 'http://localhost:4200',
-      'X-Title': 'Todoapp Voice',
-    },
-    body: JSON.stringify({
-      model,
-      messages: [
-        {
-          role: 'user',
-          content: [
-            {
-              type: 'text',
-              text: 'Transcribe the speech in this audio. Reply with only the spoken words, no preamble or quotes.',
+  const body = JSON.stringify({
+    model,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'text',
+            text: 'Transcribe the speech in this audio. Reply with only the spoken words, no preamble or quotes.',
+          },
+          {
+            type: 'input_audio',
+            input_audio: {
+              data: b64,
+              format,
             },
-            {
-              type: 'input_audio',
-              input_audio: {
-                data: b64,
-                format,
-              },
-            },
-          ],
-        },
-      ],
-      temperature: 0,
-    }),
+          },
+        ],
+      },
+    ],
+    temperature: 0,
   });
 
-  const rawText = await res.text();
-  if (!res.ok) {
-    throw new Error(sanitizeUpstreamError(rawText, res.status));
+  let lastErr: Error | null = null;
+  for (let attempt = 1; attempt <= OPENROUTER_TRANSCRIBE_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${key}`,
+          'Content-Type': 'application/json',
+          'HTTP-Referer': 'http://localhost:4200',
+          'X-Title': 'Todoapp Voice',
+        },
+        body,
+      });
+
+      const rawText = await res.text();
+      if (!res.ok) {
+        throw new Error(sanitizeUpstreamError(rawText, res.status));
+      }
+
+      let data: unknown;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        throw new Error(sanitizeUpstreamError(rawText, res.status));
+      }
+
+      const d = data as {
+        error?: { message?: string };
+        choices?: Array<{ message?: { content?: unknown } }>;
+      };
+      if (d.error?.message) {
+        throw new Error(d.error.message);
+      }
+
+      const text = extractMessageText(d.choices?.[0]?.message?.content).trim();
+      return text;
+    } catch (e) {
+      lastErr = e instanceof Error ? e : new Error(String(e));
+      const transient = isTransientUpstreamError(lastErr.message);
+      if (!transient || attempt === OPENROUTER_TRANSCRIBE_ATTEMPTS) {
+        throw lastErr;
+      }
+      await delay(OPENROUTER_TRANSCRIBE_RETRY_DELAY_MS * attempt);
+    }
   }
 
-  let data: unknown;
-  try {
-    data = JSON.parse(rawText);
-  } catch {
-    throw new Error(sanitizeUpstreamError(rawText, res.status));
-  }
+  throw lastErr ?? new Error('OpenRouter transcription failed');
+}
 
-  const d = data as {
-    error?: { message?: string };
-    choices?: Array<{ message?: { content?: unknown } }>;
-  };
-  if (d.error?.message) {
-    throw new Error(d.error.message);
-  }
-
-  const text = extractMessageText(d.choices?.[0]?.message?.content).trim();
-  return text;
+function isTransientUpstreamError(message: string): boolean {
+  const m = message.toLowerCase();
+  return (
+    m.includes('aborted') ||
+    m.includes('abort') ||
+    m.includes('timeout') ||
+    m.includes('econnreset') ||
+    m.includes('econnrefused') ||
+    m.includes('socket hang up') ||
+    m.includes('fetch failed') ||
+    m.includes('network error') ||
+    m.includes('ecanceled') ||
+    m.includes('eai_again')
+  );
 }
 
 function shouldTryNextOpenRouterModel(message: string): boolean {
@@ -149,11 +182,22 @@ function shouldTryNextOpenRouterModel(message: string): boolean {
     m.includes('input audio') ||
     m.includes('no endpoints') ||
     m.includes('does not support') ||
-    m.includes('modality')
+    m.includes('modality') ||
+    isTransientUpstreamError(message)
   );
 }
 
-async function transcribeViaOpenRouterChat(buffer: Buffer, mimetype: string): Promise<string> {
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+const OPENROUTER_TRANSCRIBE_ATTEMPTS = 3;
+const OPENROUTER_TRANSCRIBE_RETRY_DELAY_MS = 600;
+
+async function transcribeViaOpenRouterChat(
+  buffer: Buffer,
+  mimetype: string,
+): Promise<string> {
   const models = openRouterTranscriptionModels();
   let lastError: Error | null = null;
   for (const model of models) {
@@ -161,7 +205,10 @@ async function transcribeViaOpenRouterChat(buffer: Buffer, mimetype: string): Pr
       return await transcribeOpenRouterWithModel(buffer, mimetype, model);
     } catch (e) {
       lastError = e instanceof Error ? e : new Error(String(e));
-      if (!shouldTryNextOpenRouterModel(lastError.message) || models.indexOf(model) === models.length - 1) {
+      if (
+        !shouldTryNextOpenRouterModel(lastError.message) ||
+        models.indexOf(model) === models.length - 1
+      ) {
         throw lastError;
       }
     }
@@ -172,7 +219,7 @@ async function transcribeViaOpenRouterChat(buffer: Buffer, mimetype: string): Pr
 async function transcribeOpenAIWhisper(
   buffer: Buffer,
   mimetype: string,
-  openaiKey: string
+  openaiKey: string,
 ): Promise<string> {
   const extension = mimetype.includes('webm')
     ? 'webm'
@@ -184,7 +231,11 @@ async function transcribeOpenAIWhisper(
           ? 'wav'
           : 'webm';
   const openai = new OpenAI({ apiKey: openaiKey });
-  const file = bufferToFile(buffer, `audio.${extension}`, mimetype || 'audio/webm');
+  const file = bufferToFile(
+    buffer,
+    `audio.${extension}`,
+    mimetype || 'audio/webm',
+  );
   const response = await openai.audio.transcriptions.create({
     model: 'whisper-1',
     file,
@@ -197,7 +248,10 @@ export const audioUpload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 25 * 1024 * 1024 },
   fileFilter: (_req, file, cb) => {
-    if (file.mimetype.startsWith('audio/') || file.mimetype === 'application/octet-stream') {
+    if (
+      file.mimetype.startsWith('audio/') ||
+      file.mimetype === 'application/octet-stream'
+    ) {
       cb(null, true);
     } else {
       cb(new Error('Only audio files are accepted'));
@@ -212,13 +266,23 @@ function getOpenRouterKey(): string {
 }
 
 /** Convert Buffer to a File so the OpenAI SDK attaches it correctly. */
-function bufferToFile(buffer: Buffer, filename: string, mimetype: string): File {
+function bufferToFile(
+  buffer: Buffer,
+  filename: string,
+  mimetype: string,
+): File {
   // Slice into a plain ArrayBuffer (avoids SharedArrayBuffer type incompatibility).
-  const arrayBuffer = buffer.buffer.slice(buffer.byteOffset, buffer.byteOffset + buffer.byteLength) as ArrayBuffer;
+  const arrayBuffer = buffer.buffer.slice(
+    buffer.byteOffset,
+    buffer.byteOffset + buffer.byteLength,
+  ) as ArrayBuffer;
   return new File([arrayBuffer], filename, { type: mimetype });
 }
 
-async function transcribeAudio(buffer: Buffer, mimetype: string): Promise<string> {
+async function transcribeAudio(
+  buffer: Buffer,
+  mimetype: string,
+): Promise<string> {
   const openaiKey = process.env['OPENAI_API_KEY']?.trim();
 
   // OpenAI Whisper is the most reliable for browser WebM; use first when configured.
@@ -231,7 +295,7 @@ async function transcribeAudio(buffer: Buffer, mimetype: string): Promise<string
         return await transcribeViaOpenRouterChat(buffer, mimetype);
       } catch {
         throw new Error(
-          `Whisper failed (${wMsg}). OpenRouter audio also failed. Check OPENAI_API_KEY billing and OpenRouter models with audio input.`
+          `Whisper failed (${wMsg}). OpenRouter audio also failed. Check OPENAI_API_KEY billing and OpenRouter models with audio input.`,
         );
       }
     }
@@ -240,9 +304,12 @@ async function transcribeAudio(buffer: Buffer, mimetype: string): Promise<string
   try {
     return await transcribeViaOpenRouterChat(buffer, mimetype);
   } catch (orErr: unknown) {
-    const detail = orErr instanceof Error ? orErr.message : 'OpenRouter transcription failed';
+    const detail =
+      orErr instanceof Error
+        ? orErr.message
+        : 'OpenRouter transcription failed';
     throw new Error(
-      `${detail} Add OPENAI_API_KEY to api/.env for OpenAI Whisper (recommended for WebM), or set OPENROUTER_TRANSCRIPTION_MODEL to a model listed under audio input on openrouter.ai/models.`
+      `${detail} Add OPENAI_API_KEY to api/.env for OpenAI Whisper (recommended for WebM), or set OPENROUTER_TRANSCRIPTION_MODEL to a model listed under audio input on openrouter.ai/models.`,
     );
   }
 }
@@ -314,23 +381,261 @@ Examples:
     throw new Error('AI returned invalid JSON for task fields');
   }
 
-  const title = typeof parsed['title'] === 'string' ? parsed['title'].trim() : '';
+  const title =
+    typeof parsed['title'] === 'string' ? parsed['title'].trim() : '';
   const rawStatus = parsed['status'];
   const status = isTaskStatus(rawStatus) ? rawStatus : 'todo';
   const rawEst = parsed['estimate'];
   const validEstimates = [1, 2, 3, 5, 8];
   let estimate =
-    typeof rawEst === 'number' && validEstimates.includes(rawEst) ? rawEst : null;
+    typeof rawEst === 'number' && validEstimates.includes(rawEst)
+      ? rawEst
+      : null;
   if (estimate === null && title) {
     estimate = 3;
   }
   const description =
-    typeof parsed['description'] === 'string' ? parsed['description'].trim() : '';
+    typeof parsed['description'] === 'string'
+      ? parsed['description'].trim()
+      : '';
 
   return { title, status, estimate, description };
 }
 
-export async function postVoiceProcess(req: Request, res: Response): Promise<void> {
+const VOICE_INTENT_MODEL_DEFAULT = 'anthropic/claude-sonnet-4-5';
+
+function voiceIntentModel(): string {
+  return (
+    process.env['OPENROUTER_VOICE_INTENT_MODEL']?.trim() ||
+    VOICE_INTENT_MODEL_DEFAULT
+  );
+}
+
+type BoardIntentKind =
+  | 'filter_tasks'
+  | 'move_task'
+  | 'assign_task'
+  | 'create_task'
+  | 'unclear';
+
+interface RawBoardIntent {
+  intent: BoardIntentKind;
+  task: string | null;
+  status: string | null;
+  clarification_hint: string | null;
+}
+
+function normalizeSpokenStatus(
+  raw: string | null | undefined,
+): 'todo' | 'doing' | 'done' | null {
+  if (raw == null || typeof raw !== 'string') return null;
+  const s = raw.trim().toLowerCase();
+  if (!s) return null;
+  if (/\b(done|complete|completed|shipped|finished)\b/.test(s) || s === 'done')
+    return 'done';
+  if (
+    /\b(in\s+progress|work\s+in\s+progress|wip|doing|active|started)\b/.test(
+      s,
+    ) ||
+    s === 'doing'
+  ) {
+    return 'doing';
+  }
+  if (/\b(to\s*do|backlog|todo|icebox)\b/.test(s) || s === 'todo')
+    return 'todo';
+  return null;
+}
+
+async function parseTranscriptToBoardIntent(
+  transcript: string,
+): Promise<RawBoardIntent> {
+  const key = getOpenRouterKey();
+  const client = new OpenAI({
+    apiKey: key,
+    baseURL: OPENROUTER_BASE_URL,
+    defaultHeaders: {
+      'HTTP-Referer': 'http://localhost:4200',
+      'X-Title': 'Todoapp Voice',
+    },
+  });
+
+  const systemPrompt = `You classify spoken commands for a task board app.
+
+Respond ONLY with valid JSON, no markdown. Shape:
+{"intent":"filter_tasks"|"move_task"|"assign_task"|"create_task"|"unclear","task":string|null,"status":string|null,"clarification_hint":string|null}
+
+Rules:
+- intent "filter_tasks": user wants to see only their tasks / filter by current user (e.g. "filter my tasks", "show my tasks", "only tasks assigned to me"). task and status must be null.
+- intent "move_task": user wants to change a task's column. Put the task name or fragment they said in "task" (never invent). Put the target column they said in "status" as free text (e.g. "In Progress", "Done", "To do"). If task or target column is missing, use intent "unclear" and a short clarification_hint.
+- intent "assign_task": user assigns a task to themselves ("assign X to me", "give task Y to me"). Put task fragment in "task". status null.
+- intent "create_task": user is describing NEW work to add as a card (e.g. "add a task to fix login", "remind me to update docs", "I need a task for API tests"). NOT a board command.
+- intent "unclear": greeting, noise, unrelated, or ambiguous. Optional clarification_hint in plain English.
+
+Disambiguation:
+- "Move X to in progress" → move_task with task "X", status "in progress"
+- "Create a task to move the button" → create_task (new work, not move_task)
+- Commands that mention an existing task title + destination column → move_task
+
+Examples:
+{"intent":"filter_tasks","task":null,"status":null,"clarification_hint":null}
+{"intent":"move_task","task":"Login bug","status":"Work in progress","clarification_hint":null}
+{"intent":"assign_task","task":"API docs","status":null,"clarification_hint":null}
+{"intent":"create_task","task":null,"status":null,"clarification_hint":null}
+{"intent":"unclear","task":null,"status":null,"clarification_hint":"Say which task and which column."}`;
+
+  const response = await client.chat.completions.create({
+    model: voiceIntentModel(),
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: transcript },
+    ],
+    response_format: { type: 'json_object' },
+    temperature: 0.2,
+  });
+
+  let raw = response.choices[0]?.message?.content ?? '{}';
+  raw = raw.trim();
+  const jsonBlock = raw.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonBlock?.[1]) raw = jsonBlock[1].trim();
+
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return {
+      intent: 'unclear',
+      task: null,
+      status: null,
+      clarification_hint: 'Could not parse intent',
+    };
+  }
+
+  const intentRaw = parsed['intent'];
+  const intent: BoardIntentKind =
+    intentRaw === 'filter_tasks' ||
+    intentRaw === 'move_task' ||
+    intentRaw === 'assign_task' ||
+    intentRaw === 'create_task' ||
+    intentRaw === 'unclear'
+      ? intentRaw
+      : 'unclear';
+
+  const task =
+    typeof parsed['task'] === 'string' ? parsed['task'].trim() || null : null;
+  const status =
+    typeof parsed['status'] === 'string'
+      ? parsed['status'].trim() || null
+      : null;
+  const clarification_hint =
+    typeof parsed['clarification_hint'] === 'string'
+      ? parsed['clarification_hint'].trim() || null
+      : null;
+
+  return { intent, task, status, clarification_hint };
+}
+
+/** Unified voice: transcribe → classify; for create_task also build task card fields. */
+export async function postVoiceBoard(
+  req: Request,
+  res: Response,
+): Promise<void> {
+  const file = req.file;
+  if (!file) {
+    res.status(400).json({ error: 'audio file is required' });
+    return;
+  }
+
+  try {
+    const transcript = await transcribeAudio(file.buffer, file.mimetype);
+
+    if (!transcript.trim()) {
+      res.status(422).json({ error: 'No speech detected in the audio' });
+      return;
+    }
+
+    const classified = await parseTranscriptToBoardIntent(transcript);
+
+    if (classified.intent === 'create_task') {
+      const parsed = await parseTranscriptToTask(transcript);
+      if (!parsed.title) {
+        res.status(422).json({
+          error: 'Could not extract a task title from the transcript',
+        });
+        return;
+      }
+      res.json({
+        kind: 'create_task',
+        transcript,
+        title: parsed.title,
+        status: parsed.status,
+        estimate: parsed.estimate,
+        description: parsed.description,
+      });
+      return;
+    }
+
+    if (classified.intent === 'filter_tasks') {
+      res.json({ kind: 'filter_tasks', transcript });
+      return;
+    }
+
+    if (classified.intent === 'assign_task') {
+      if (!classified.task?.trim()) {
+        res.json({
+          kind: 'unclear',
+          transcript,
+          clarification_hint:
+            classified.clarification_hint ?? 'Say which task to assign to you.',
+        });
+        return;
+      }
+      res.json({
+        kind: 'assign_task',
+        transcript,
+        task: classified.task.trim(),
+      });
+      return;
+    }
+
+    if (classified.intent === 'move_task') {
+      const mapped = normalizeSpokenStatus(classified.status);
+      if (!classified.task?.trim() || !mapped) {
+        res.json({
+          kind: 'unclear',
+          transcript,
+          clarification_hint:
+            classified.clarification_hint ??
+            (!classified.task?.trim()
+              ? 'Say which task to move.'
+              : 'Say which column (To do, Work in progress, or Done).'),
+        });
+        return;
+      }
+      res.json({
+        kind: 'move_task',
+        transcript,
+        task: classified.task.trim(),
+        status: mapped,
+      });
+      return;
+    }
+
+    res.json({
+      kind: 'unclear',
+      transcript,
+      clarification_hint: classified.clarification_hint,
+    });
+  } catch (err: unknown) {
+    const message =
+      err instanceof Error ? err.message : 'Voice board processing failed';
+    res.status(500).json({ error: clipErrorForClient(message) });
+  }
+}
+
+export async function postVoiceProcess(
+  req: Request,
+  res: Response,
+): Promise<void> {
   const file = req.file;
   if (!file) {
     res.status(400).json({ error: 'audio file is required' });
@@ -348,13 +653,16 @@ export async function postVoiceProcess(req: Request, res: Response): Promise<voi
     const parsed = await parseTranscriptToTask(transcript);
 
     if (!parsed.title) {
-      res.status(422).json({ error: 'Could not extract a task title from the transcript' });
+      res
+        .status(422)
+        .json({ error: 'Could not extract a task title from the transcript' });
       return;
     }
 
     res.json({ transcript, ...parsed });
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Voice processing failed';
+    const message =
+      err instanceof Error ? err.message : 'Voice processing failed';
     res.status(500).json({ error: clipErrorForClient(message) });
   }
 }
@@ -391,9 +699,12 @@ export async function postVoiceLog(req: Request, res: Response): Promise<void> {
     return;
   }
 
-  const description = typeof exp['description'] === 'string' ? exp['description'] : '';
+  const description =
+    typeof exp['description'] === 'string' ? exp['description'] : '';
   if (!isTaskStatus(exp['status'])) {
-    res.status(400).json({ error: 'expected.status must be todo, doing, or done' });
+    res
+      .status(400)
+      .json({ error: 'expected.status must be todo, doing, or done' });
     return;
   }
 
@@ -420,7 +731,8 @@ export async function postVoiceLog(req: Request, res: Response): Promise<void> {
     await appendFile(resolved, line, 'utf8');
     res.status(204).send();
   } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Failed to write voice log';
+    const message =
+      err instanceof Error ? err.message : 'Failed to write voice log';
     res.status(500).json({ error: message });
   }
 }

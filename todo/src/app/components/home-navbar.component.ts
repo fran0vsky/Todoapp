@@ -1,4 +1,10 @@
-import { Component, ElementRef, HostListener, inject, signal } from '@angular/core';
+import {
+  Component,
+  ElementRef,
+  HostListener,
+  inject,
+  signal,
+} from '@angular/core';
 import { RouterModule } from '@angular/router';
 import { AuthService } from '../services/auth.service';
 import { TaskStateService } from '../services/task-state.service';
@@ -26,7 +32,8 @@ export class HomeNavbarComponent {
     const next = !this.panelOpen();
     this.panelOpen.set(next);
     if (next) {
-      this.nicknameDraft.set(this.authService.nicknameFromMetadata(this.authService.currentUser()!));
+      const u = this.authService.currentUser();
+      this.nicknameDraft.set(u ? this.authService.nicknameFromMetadata(u) : '');
       this.saveError.set(null);
     }
   }

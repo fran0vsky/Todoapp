@@ -12,7 +12,8 @@ import { HomeNavbarComponent } from './home-navbar.component';
   imports: [RouterModule, HomeNavbarComponent, NgClass],
   templateUrl: './projects-list.component.html',
   host: {
-    class: 'flex flex-col flex-1 min-h-0 bg-black text-white px-6 pt-3 pb-6 md:px-10 md:pt-4 md:pb-10',
+    class:
+      'flex flex-col flex-1 min-h-0 bg-black text-white px-6 pt-3 pb-6 md:px-10 md:pt-4 md:pb-10',
   },
 })
 export class ProjectsListComponent implements OnInit {
@@ -74,7 +75,7 @@ export class ProjectsListComponent implements OnInit {
     }
     if (
       !confirm(
-        `Delete “${project.name}” and all of its tasks? This cannot be undone.`
+        `Delete “${project.name}” and all of its tasks? This cannot be undone.`,
       )
     ) {
       return;

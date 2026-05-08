@@ -1,0 +1,4 @@
+# Linked values are filled by `supabase link` / Dashboard. Functions deploy with `supabase functions deploy todo-api`.
+
+[functions.todo-api]
+verify_jwt = false

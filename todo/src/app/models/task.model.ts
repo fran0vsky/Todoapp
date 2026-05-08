@@ -19,4 +19,3 @@ export interface Task {
   /** Story points (Fibonacci); omitted or null when not set. */
   estimate?: number | null;
 }
-

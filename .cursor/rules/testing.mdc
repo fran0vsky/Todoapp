@@ -1,31 +1,54 @@
 ---
-description: E2E testing conventions using Playwright in the todo-e2e Nx project
-globs: todo-e2e/**/*.ts
+description: Frontend unit tests (Vitest), E2E (Playwright), and CI conventions
+globs: todo/**/*.{spec.ts,vitest.config.mts}, todo-e2e/**/*.ts
 alwaysApply: true
 ---
 
 # Testing
 
-E2E only — **Playwright** via `@nx/playwright`. No unit test suite currently exists.
+Two layers apply to `todo`:
 
-## Running Tests
+- **Vitest (+ Analog Angular helpers)** — component/unit tests under `todo/src/**/*.spec.ts`, run via `@nx/vitest` target `todo:test`. Coverage outputs to `coverage/todo/` (TypeScript-only; Angular HTML templates are exercised through components, not counted as separate files).
+- **E2E** — **Playwright** via `@nx/playwright`, project `todo-e2e`.
+
+## Running tests locally
 
 ```bash
-# Full suite (requires todo-e2e/.env with E2E_EMAIL and E2E_PASSWORD)
+# Lint + format gate (mirror CI)
+npm run lint
+npm run format:check
+
+# Unit/integration (Vitest, all workspace projects that define `test`)
+npm run test
+
+# E2E — full suite (requires todo-e2e/.env with E2E_EMAIL and E2E_PASSWORD)
 npx nx run todo-e2e:e2e
 
-# Public (unauthenticated) flows only
+# E2E — public (unauthenticated) flows only
 npx nx run todo-e2e:e2e -- --project=chromium-public
+
+# Workspace targets directly
+npx nx run todo:test --coverage=false
 ```
 
-Both dev servers (`nx run api:serve` + `nx run todo:serve`) are started automatically by the Playwright config. Set `reuseExistingServer: true` is active — already-running servers are reused.
+Both dev servers (`nx run api:serve` + `nx run todo:serve`) are started automatically by the Playwright config. On CI, **`reuseExistingServer` is disabled** (`CI=true`) so ephemeral runners always boot fresh servers. Locally, reused servers remain allowed.
 
-## File Structure
+If Playwright logs `EADDRINUSE` on port **4200** (or **3333**), another process is bound to that port and the preset may **reuse** it—public specs can then see the wrong app or odd auth state. Free the port or run once with `CI=true` in the shell so both servers are started by Nx for that run.
+
+## Vitest specifics
+
+- `todo/vitest.config.mts`: Analog `@analogjs/vite-plugin-angular`, `pool: 'forks'`, `src/test-setup.ts` calls `@analogjs/vitest-angular/setup-testbed` (`zoneless: true`).
+- `todo/src/**/*.spec.ts`: use **`TestBed` / `provideHttpClient` + `provideHttpClientTesting`** for Angular services; **`vi.mock` + hoisted stubs** where module-level Supabase mocks are needed.
+- `todo/src/services/supabase.client.ts`: `resetSupabaseClientForTesting()` exists so specs can isolate the singleton without `vi.isolateModulesAsync`.
+
+Raise global coverage thresholds in `vitest.config.mts` gradually as suites grow toward full `todo/` coverage.
+
+## File structure (`todo-e2e`)
 
 ```
 todo-e2e/src/
   auth.setup.ts     ← global auth setup; saves session to .auth/user.json
-  app.spec.ts       ← authenticated flows (depends on auth setup)
+  app.spec.ts       ← authenticated flows (depends on setup)
   public.spec.ts    ← unauthenticated flows (no storage state)
   helpers.ts        ← shared page helpers and selectors
 ```
@@ -34,33 +57,37 @@ todo-e2e/src/
 - Auth setup: `auth.setup.ts` (matched via `testMatch`, not a spec)
 - New helpers go in `helpers.ts` — do not duplicate selector logic across spec files.
 
-## Auth
+### CI E2E (GitHub Actions)
+
+Public checks run every push/PR (`chromium-public`). The **`setup` + `chromium`** projects run **only when** repo secrets **`E2E_EMAIL`** and **`E2E_PASSWORD`** are configured (matching `auth.setup.ts`).
+
+### Auth
 
 - Auth setup reads `E2E_EMAIL` / `E2E_PASSWORD` from `todo-e2e/.env` (or workspace `.env`).
 - Authenticated specs depend on the `setup` project and use `storageState: 'todo-e2e/.auth/user.json'`.
 - Never hard-code credentials in spec files.
 
-## What to Test
+## What to test
 
 | Area             | Scope                                                                            |
 | ---------------- | -------------------------------------------------------------------------------- |
 | Routing / guards | Redirects (e.g. `/` → `/login` without session)                                  |
 | Projects         | Create, list, open (URL + heading check)                                         |
-| Tasks            | Full CRUD: add, edit, move status, archive, restore, delete                      |
-| New features     | Add a `test.describe` block in `app.spec.ts` (auth) or `public.spec.ts` (public) |
+| Tasks            | Full CRUD: add, edit, move status, archive, restore, delete                       |
+| New features     | Add Vitest specs under `todo/src` and E2E in `app.spec.ts` / `public.spec.ts` as appropriate |
 
-After every new feature or change, add or update the relevant spec.
+After every new feature or change, update the relevant Vitest specs and Playwright specs.
 
-## Selectors — Priority Order
+## Selectors (Playwright)
 
 1. **Role + name:** `page.getByRole('button', { name: 'Add Task' })`
 2. **Placeholder / label:** `page.getByPlaceholder('Task title')`
 3. **Text:** `page.getByText('...')`
-4. **`data-testid`** as last resort — add the attribute to the template if needed
+4. **`data-testid`** last resort — add the attribute to the template if needed
 
 Do **not** use CSS class selectors (Tailwind classes are refactor targets, not stable selectors).
 
-## Helper Pattern
+## Helper pattern
 
 ```typescript
 // helpers.ts — export reusable waits and locators
@@ -73,13 +100,12 @@ export function taskCardInColumn(page: Page, column: string, title: string) {
 }
 ```
 
-## Test Structure
+## E2E test structure
 
 ```typescript
 test.describe('tasks', () => {
   test('should add a task', async ({ page }) => {
     await createProjectAndOpenBoard(page, 'My Project');
-    // ... actions
     await expect(taskCardInColumn(page, 'To do', 'My Task')).toBeVisible();
   });
 });

@@ -51,3 +51,5 @@ todo-e2e/.auth/
 
 
 .angular
+
+vitest.config.*.timestamp*

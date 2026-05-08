@@ -21,7 +21,9 @@ import { SpeechRecognitionService } from '../services/speech-recognition.service
   selector: 'app-add-edit-task',
   templateUrl: './add-edit-task.component.html',
 })
-export class AddEditTaskComponent implements OnChanges, AfterViewInit, OnDestroy {
+export class AddEditTaskComponent
+  implements OnChanges, AfterViewInit, OnDestroy
+{
   private readonly sanitizer = inject(DomSanitizer);
   protected readonly speech = inject(SpeechRecognitionService);
 
@@ -47,7 +49,11 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit, OnDestroy
   /** Disable the button during non-interactive background work (model load, processing). */
   protected readonly micDisabled = computed(() => {
     const s = this.speech.state();
-    return s === 'requesting-permission' || s === 'loading-model' || s === 'processing';
+    return (
+      s === 'requesting-permission' ||
+      s === 'loading-model' ||
+      s === 'processing'
+    );
   });
 
   @Input() title = '';
@@ -81,7 +87,8 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit, OnDestroy
   @Output() clear = new EventEmitter<void>();
 
   @ViewChild('descEditor') private descEditor?: ElementRef<HTMLDivElement>;
-  @ViewChild('statusSelect') private statusSelect?: ElementRef<HTMLSelectElement>;
+  @ViewChild('statusSelect')
+  private statusSelect?: ElementRef<HTMLSelectElement>;
 
   /** Writable model for the status dropdown; `status` is one-way from parent, so ngModel must not bind to it alone. */
   protected selectedStatus = TaskStatus.Todo;
@@ -110,7 +117,10 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit, OnDestroy
       this.selectedStatus = this.status;
       queueMicrotask(() => this.handleDescriptionInputChange());
     }
-    if (changes['status'] || (changes['formResetCounter'] && !changes['formResetCounter'].firstChange)) {
+    if (
+      changes['status'] ||
+      (changes['formResetCounter'] && !changes['formResetCounter'].firstChange)
+    ) {
       queueMicrotask(() => this.syncStatusSelectDom());
     }
   }
@@ -144,7 +154,9 @@ export class AddEditTaskComponent implements OnChanges, AfterViewInit, OnDestroy
     this.handleDescriptionInputChange();
   }
 
-  protected exec(cmd: 'bold' | 'italic' | 'underline' | 'insertUnorderedList'): void {
+  protected exec(
+    cmd: 'bold' | 'italic' | 'underline' | 'insertUnorderedList',
+  ): void {
     document.execCommand(cmd, false);
     const el = this.descEditor?.nativeElement;
     if (el) {

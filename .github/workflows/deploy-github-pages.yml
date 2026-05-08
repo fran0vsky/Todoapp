@@ -1,0 +1,54 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'todo/**'
+      - '.github/workflows/deploy-github-pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Substitute Supabase project ref for production API URL
+        env:
+          SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "Configure repository variable SUPABASE_PROJECT_REF (your Supabase project reference ID)."
+            exit 1
+          fi
+          sed -i "s/PLACEHOLDER_PROJECT_REF/${SUPABASE_PROJECT_REF}/g" todo/src/environments/environment.production.ts
+
+      # Base href matches project Pages URL: https://<owner>.github.io/<repo>/
+      - name: Build Angular (production)
+        run: npx nx run todo:build --configuration=production -- --base-href=/Todoapp/
+
+      - name: SPA fallback for GitHub Pages
+        run: cp dist/todo/index.html dist/todo/404.html
+
+      - name: Deploy to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dist/todo
+          force_orphan: true

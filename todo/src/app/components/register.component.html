@@ -1,10 +1,16 @@
 <div class="flex flex-1 min-h-0 items-center justify-center bg-black p-6">
-  <div class="w-full max-w-md rounded-xl bg-neutral-900 border border-neutral-800 p-8 shadow-lg">
+  <div
+    class="w-full max-w-md rounded-xl bg-neutral-900 border border-neutral-800 p-8 shadow-lg"
+  >
     <h2 class="text-2xl font-semibold text-white text-center mb-6">Register</h2>
 
     <form (ngSubmit)="onSubmit()" class="space-y-5">
       <div>
-        <label for="email" class="block text-sm font-medium text-neutral-400 mb-1">Email</label>
+        <label
+          for="email"
+          class="block text-sm font-medium text-neutral-400 mb-1"
+          >Email</label
+        >
         <input
           type="email"
           id="email"
@@ -19,7 +25,11 @@
         />
       </div>
       <div>
-        <label for="password" class="block text-sm font-medium text-neutral-400 mb-1">Password</label>
+        <label
+          for="password"
+          class="block text-sm font-medium text-neutral-400 mb-1"
+          >Password</label
+        >
         <input
           type="password"
           id="password"
@@ -42,7 +52,10 @@
             [class.text-red-400]="passwordDirty() && !minLengthMet()"
             [class.text-green-400]="passwordDirty() && minLengthMet()"
           >
-            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+            <span
+              class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center"
+              aria-hidden="true"
+            >
               @if (!passwordDirty()) {
                 ○
               } @else if (minLengthMet()) {
@@ -59,7 +72,10 @@
             [class.text-red-400]="passwordDirty() && !uppercaseMet()"
             [class.text-green-400]="passwordDirty() && uppercaseMet()"
           >
-            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+            <span
+              class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center"
+              aria-hidden="true"
+            >
               @if (!passwordDirty()) {
                 ○
               } @else if (uppercaseMet()) {
@@ -76,7 +92,10 @@
             [class.text-red-400]="passwordDirty() && !lowercaseMet()"
             [class.text-green-400]="passwordDirty() && lowercaseMet()"
           >
-            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+            <span
+              class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center"
+              aria-hidden="true"
+            >
               @if (!passwordDirty()) {
                 ○
               } @else if (lowercaseMet()) {
@@ -93,7 +112,10 @@
             [class.text-red-400]="passwordDirty() && !digitMet()"
             [class.text-green-400]="passwordDirty() && digitMet()"
           >
-            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+            <span
+              class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center"
+              aria-hidden="true"
+            >
               @if (!passwordDirty()) {
                 ○
               } @else if (digitMet()) {
@@ -110,7 +132,10 @@
             [class.text-red-400]="passwordDirty() && !specialMet()"
             [class.text-green-400]="passwordDirty() && specialMet()"
           >
-            <span class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center" aria-hidden="true">
+            <span
+              class="mt-0.5 shrink-0 font-mono text-xs w-4 text-center"
+              aria-hidden="true"
+            >
               @if (!passwordDirty()) {
                 ○
               } @else if (specialMet()) {
@@ -129,7 +154,9 @@
         class="w-full rounded-xl bg-purple-500 text-white px-5 py-3 font-medium hover:bg-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-300 shadow-sm transition-colors disabled:pointer-events-none disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-neutral-600 disabled:text-neutral-300 disabled:hover:bg-neutral-600"
       >
         @if (isLoading()) {
-          <span class="inline-block w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin"></span>
+          <span
+            class="inline-block w-4 h-4 border-2 border-neutral-500 border-t-white rounded-full animate-spin"
+          ></span>
         } @else {
           Register
         }
@@ -145,7 +172,11 @@
 
     <p class="mt-6 text-center text-sm text-neutral-500">
       Already have an account?
-      <a routerLink="/login" class="text-purple-400 hover:text-purple-300 font-medium">Login</a>
+      <a
+        routerLink="/login"
+        class="text-purple-400 hover:text-purple-300 font-medium"
+        >Login</a
+      >
     </p>
   </div>
 </div>
