@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     env:
       CI: 'true'
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
       E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
       E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
 
@@ -39,8 +43,9 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: E2E (public project)
+        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_KEY != '' && env.SUPABASE_ANON_KEY != '' }}
         run: npx nx run todo-e2e:e2e -- --project=chromium-public
 
       - name: E2E (authenticated flows)
-        if: ${{ env.E2E_EMAIL != '' && env.E2E_PASSWORD != '' }}
+        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_KEY != '' && env.SUPABASE_ANON_KEY != '' && env.E2E_EMAIL != '' && env.E2E_PASSWORD != '' }}
         run: npx nx run todo-e2e:e2e -- --project=setup --project=chromium
