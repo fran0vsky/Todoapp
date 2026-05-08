@@ -78,6 +78,15 @@
           "buildTarget": "api:build:production"
         }
       }
+    },
+    "test": {
+      "executor": "@nx/vitest:test",
+      "outputs": ["{options.reportsDirectory}"],
+      "options": {
+        "config": "api/vitest.config.mts",
+        "reportsDirectory": "../coverage/api",
+        "passWithNoTests": false
+      }
     }
   },
   "tags": []

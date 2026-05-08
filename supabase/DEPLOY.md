@@ -8,11 +8,11 @@ This app’s production API is the **`todo-api`** Edge Function. The Angular UI 
 
 Set at least:
 
-| Secret | Purpose |
-|--------|---------|
-| `SUPABASE_URL` | Usually auto-provided when deployed with Supabase CLI. |
+| Secret                      | Purpose                                                                     |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `SUPABASE_URL`              | Usually auto-provided when deployed with Supabase CLI.                      |
 | `SUPABASE_SERVICE_ROLE_KEY` | Service-role access for DB + `auth.admin` (same as backend `SUPABASE_KEY`). |
-| `SUPABASE_ANON_KEY` | Returned by `GET /api/auth` for the browser Supabase client. |
+| `SUPABASE_ANON_KEY`         | Returned by `GET /api/auth` for the browser Supabase client.                |
 
 **CORS:** set **`ALLOWED_ORIGINS`** to a comma-separated list of origins that may call the API, for example:
 
@@ -40,6 +40,8 @@ supabase secrets set ALLOWED_ORIGINS=http://localhost:4200,https://youruser.gith
 # …set other secrets as needed…
 supabase functions deploy todo-api --no-verify-jwt
 ```
+
+On **GitHub** (optional): push changes under `supabase/functions/` to `main` to run [`.github/workflows/deploy-supabase-function.yml`](../.github/workflows/deploy-supabase-function.yml). Configure repository secret **`SUPABASE_ACCESS_TOKEN`** (Supabase CLI access token) and variable **`SUPABASE_PROJECT_REF`** (same as Pages build).
 
 `verify_jwt` is disabled in [`supabase/config.toml`](config.toml); the handler validates Bearer tokens where needed.
 

@@ -6,8 +6,12 @@
   "scripts": {
     "lint": "npx nx run-many -t lint --all",
     "test": "npx nx run-many -t test --all --coverage",
-    "format": "prettier --write todo todo-e2e api \".github/workflows\" package.json nx.json eslint.config.mjs",
-    "format:check": "prettier --check todo todo-e2e api \".github/workflows\" package.json nx.json eslint.config.mjs"
+    "api:serve": "npx nx run api:serve",
+    "api:deploy": "npx supabase functions deploy todo-api --no-verify-jwt",
+    "web:start": "npx nx run todo:serve",
+    "web:deploy": "gh workflow run deploy-github-pages.yml",
+    "format": "prettier --write todo todo-e2e api \".github/workflows\" package.json nx.json eslint.config.mjs README.md",
+    "format:check": "prettier --check todo todo-e2e api \".github/workflows\" package.json nx.json eslint.config.mjs README.md"
   },
   "repository": {
     "type": "git",

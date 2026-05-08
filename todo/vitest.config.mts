@@ -28,6 +28,12 @@ export default defineConfig(() => ({
         'src/index.html',
         'src/environments/**',
       ],
+      thresholds: {
+        lines: 58,
+        statements: 58,
+        branches: 40,
+        functions: 70,
+      },
     },
   },
 }));
