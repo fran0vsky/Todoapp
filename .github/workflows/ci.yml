@@ -39,31 +39,40 @@ jobs:
             exit 1
           fi
 
-      - name: Generate SARIF lint report
+      - name: Generate SARIF lint reports (per-project)
         if: always()
         run: |
-          mkdir -p reports/lint
-          set +e
-          npx eslint "todo/**/*.{ts,html}" "api/**/*.ts" "todo-e2e/**/*.ts" --format @microsoft/eslint-formatter-sarif --output-file reports/lint/eslint.sarif
-          ESLINT_EXIT=$?
-          set -e
-          if [ $ESLINT_EXIT -gt 1 ]; then
-            echo "ESLint failed with a tool error (exit code $ESLINT_EXIT)."
-            exit $ESLINT_EXIT
-          fi
-          echo "SARIF report generated (eslint exit code $ESLINT_EXIT)."
+          mkdir -p reports/lint/sarif
+          run_eslint() {
+            set +e
+            "$@"
+            local rc=$?
+            set -e
+            if [ $rc -gt 1 ]; then echo "ESLint tool error (exit $rc)"; exit $rc; fi
+          }
+          run_eslint npx eslint "api/**/*.ts" \
+            --format @microsoft/eslint-formatter-sarif \
+            --output-file reports/lint/sarif/api.sarif
+          cd todo && run_eslint npx eslint "**/*.{ts,html}" \
+            --format @microsoft/eslint-formatter-sarif \
+            --output-file ../reports/lint/sarif/todo.sarif && cd ..
+          cd todo-e2e && run_eslint npx eslint "src/**/*.ts" \
+            --format @microsoft/eslint-formatter-sarif \
+            --output-file ../reports/lint/sarif/e2e.sarif && cd ..
 
-      - name: Generate HTML lint report
+      - name: Generate HTML lint reports (per-project)
         if: always()
         run: |
           mkdir -p reports/lint
-          npx eslint "todo/**/*.{ts,html}" "api/**/*.ts" "todo-e2e/**/*.ts" --format html --output-file reports/lint/eslint.html || true
+          npx eslint "api/**/*.ts" --format html --output-file reports/lint/api.html || true
+          cd todo && npx eslint "**/*.{ts,html}" --format html --output-file ../reports/lint/todo.html || true && cd ..
+          cd todo-e2e && npx eslint "src/**/*.ts" --format html --output-file ../reports/lint/e2e.html || true && cd ..
 
       - name: Upload SARIF to code scanning
-        if: ${{ always() && hashFiles('reports/lint/eslint.sarif') != '' }}
+        if: ${{ always() && hashFiles('reports/lint/sarif/*.sarif') != '' }}
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: reports/lint/eslint.sarif
+          sarif_file: reports/lint/sarif
           category: eslint
 
       - name: Upload lint artifacts
