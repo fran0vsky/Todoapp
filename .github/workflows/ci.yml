@@ -68,19 +68,26 @@ jobs:
           cd todo && npx eslint "**/*.{ts,html}" --format html --output-file ../reports/lint/todo.html || true && cd ..
           cd todo-e2e && npx eslint "src/**/*.ts" --format html --output-file ../reports/lint/e2e.html || true && cd ..
 
-      - name: Merge SARIF files
-        if: always()
-        run: |
-          if ls reports/lint/sarif/*.sarif 1>/dev/null 2>&1; then
-            jq -s '{ "version": "2.1.0", "$schema": .[0]["$schema"], "runs": [.[].runs[]] }' reports/lint/sarif/*.sarif > reports/lint/eslint.sarif
-          fi
-
-      - name: Upload SARIF to code scanning
-        if: ${{ always() && hashFiles('reports/lint/eslint.sarif') != '' }}
+      - name: Upload API SARIF to code scanning
+        if: ${{ always() && hashFiles('reports/lint/sarif/api.sarif') != '' }}
         uses: github/codeql-action/upload-sarif@v4
         with:
-          sarif_file: reports/lint/eslint.sarif
-          category: eslint
+          sarif_file: reports/lint/sarif/api.sarif
+          category: eslint-api
+
+      - name: Upload Todo SARIF to code scanning
+        if: ${{ always() && hashFiles('reports/lint/sarif/todo.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: reports/lint/sarif/todo.sarif
+          category: eslint-todo
+
+      - name: Upload E2E SARIF to code scanning
+        if: ${{ always() && hashFiles('reports/lint/sarif/e2e.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: reports/lint/sarif/e2e.sarif
+          category: eslint-e2e
 
       - name: Upload lint artifacts
         if: always()
