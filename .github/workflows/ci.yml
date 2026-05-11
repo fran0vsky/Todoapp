@@ -43,7 +43,15 @@ jobs:
         if: always()
         run: |
           mkdir -p reports/lint
+          set +e
           npx eslint "todo/**/*.{ts,html}" "api/**/*.ts" "todo-e2e/**/*.ts" --format @microsoft/eslint-formatter-sarif --output-file reports/lint/eslint.sarif
+          ESLINT_EXIT=$?
+          set -e
+          if [ $ESLINT_EXIT -gt 1 ]; then
+            echo "ESLint failed with a tool error (exit code $ESLINT_EXIT)."
+            exit $ESLINT_EXIT
+          fi
+          echo "SARIF report generated (eslint exit code $ESLINT_EXIT)."
 
       - name: Generate HTML lint report
         if: always()
