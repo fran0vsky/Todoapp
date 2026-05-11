@@ -43,7 +43,7 @@ jobs:
         if: always()
         run: |
           mkdir -p reports/lint
-          npx eslint "todo/**/*.{ts,html}" "api/**/*.ts" "todo-e2e/**/*.ts" --format sarif --output-file reports/lint/eslint.sarif || true
+          npx eslint "todo/**/*.{ts,html}" "api/**/*.ts" "todo-e2e/**/*.ts" --format @microsoft/eslint-formatter-sarif --output-file reports/lint/eslint.sarif
 
       - name: Generate HTML lint report
         if: always()
@@ -95,6 +95,12 @@ jobs:
           mkdir -p reports/test
           set -o pipefail
           npm run test | tee reports/test/test.log
+
+      - name: Build API (verification)
+        run: |
+          mkdir -p reports/test
+          set -o pipefail
+          npx nx run api:build | tee reports/test/api-build.log
 
       - name: Upload test and coverage artifacts
         if: always()
@@ -188,8 +194,6 @@ jobs:
           path: |
             reports/e2e
             dist/.playwright/todo-e2e
-            playwright-report
-            test-results
           if-no-files-found: warn
 
       - name: Job summary

@@ -75,10 +75,18 @@ jobs:
 
       - name: Deployment summary
         if: always()
+        env:
+          DEPLOYMENT_URL: ${{ steps.deployment_url.outputs.value }}
         run: |
           {
             echo "## Frontend deploy"
-            echo "- URL: ${{ steps.deployment_url.outputs.value }}"
-            echo "- Artifacts: deploy-frontend-artifacts"
+            if [ -n "$DEPLOYMENT_URL" ]; then
+              echo "- Status: success"
+              echo "- URL: $DEPLOYMENT_URL"
+            else
+              echo "- Status: failure"
+              echo "- Deployment did not complete. See build logs in the deploy-frontend-artifacts artifact."
+            fi
+            echo "- Artifact name: deploy-frontend-artifacts"
             echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } >> "$GITHUB_STEP_SUMMARY"

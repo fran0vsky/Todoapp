@@ -35,8 +35,8 @@ export default defineConfig({
   use: {
     baseURL,
     trace: 'on-first-retry',
-    video: 'retain-on-failure',
-    screenshot: 'only-on-failure',
+    video: 'on',
+    screenshot: 'on',
   },
   webServer: isPostDeployRun
     ? undefined
