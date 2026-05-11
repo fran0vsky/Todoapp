@@ -2,20 +2,18 @@ name: CI
 
 on:
   push:
-  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
 
 jobs:
-  verify:
+  lint:
     runs-on: ubuntu-latest
-    env:
-      CI: 'true'
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
-      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
-      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
-
+    permissions:
+      contents: read
+      security-events: write
     steps:
       - uses: actions/checkout@v4
 
@@ -25,27 +23,185 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: ESLint (Nx lint)
-        run: npm run lint
+      - name: Run lint + format checks
+        run: |
+          mkdir -p reports/lint
+          set +e
+          npm run lint > reports/lint/nx-lint.log 2>&1
+          LINT_EXIT=$?
+          npm run format:check > reports/lint/prettier.log 2>&1
+          FORMAT_EXIT=$?
+          set -e
+          if [ $LINT_EXIT -ne 0 ] || [ $FORMAT_EXIT -ne 0 ]; then
+            echo "Lint or format checks failed."
+            exit 1
+          fi
 
-      - name: Prettier
-        run: npm run format:check
+      - name: Generate SARIF lint report
+        if: always()
+        run: |
+          mkdir -p reports/lint
+          npx eslint "todo/**/*.{ts,html}" "api/**/*.ts" "todo-e2e/**/*.ts" --format sarif --output-file reports/lint/eslint.sarif || true
+          if [ ! -f reports/lint/eslint.sarif ]; then
+            echo '{"version":"2.1.0","runs":[]}' > reports/lint/eslint.sarif
+          fi
 
-      - name: Vitest (todo) with coverage
-        run: npm run test
+      - name: Generate HTML lint report
+        if: always()
+        run: |
+          mkdir -p reports/lint
+          npx eslint "todo/**/*.{ts,html}" "api/**/*.ts" "todo-e2e/**/*.ts" --format html --output-file reports/lint/eslint.html || true
 
-      - name: Build
-        run: npx nx run-many -t build --projects=api,todo
+      - name: Upload SARIF to code scanning
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: reports/lint/eslint.sarif
+          category: eslint
+
+      - name: Upload lint artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-reports
+          path: reports/lint
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Lint stage"
+            echo "- Artifacts: lint-reports"
+            echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run unit tests with coverage
+        run: |
+          mkdir -p reports/test
+          set -o pipefail
+          npm run test | tee reports/test/test.log
+
+      - name: Upload test and coverage artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-coverage-reports
+          path: |
+            reports/test
+            coverage/api
+            coverage/todo
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Test stage"
+            echo "- Artifacts: test-coverage-reports"
+            echo "- Coverage paths: coverage/api, coverage/todo"
+            echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  deploy_frontend:
+    needs: [lint, test]
+    uses: ./.github/workflows/deploy-github-pages.yml
+    permissions:
+      contents: write
+    secrets: inherit
+
+  deploy_backend:
+    needs: [lint, test]
+    uses: ./.github/workflows/deploy-supabase-function.yml
+    secrets: inherit
+
+  e2e_post_deploy:
+    needs: [deploy_frontend, deploy_backend]
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+      BASE_URL: ${{ needs.deploy_frontend.outputs.deployment_url }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      ADMIN_EMAIL: ${{ vars.ADMIN_EMAIL }}
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+      API_FUNCTION_URL: ${{ needs.deploy_backend.outputs.deployment_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
 
       - name: Install Playwright Chromium (with OS deps)
         run: npx playwright install --with-deps chromium
 
-      - name: E2E (public project)
-        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_KEY != '' && env.SUPABASE_ANON_KEY != '' }}
-        run: npx nx run todo-e2e:e2e -- --project=chromium-public
+      - name: Run post-deploy E2E suites
+        run: |
+          mkdir -p reports/e2e
+          set -o pipefail
+          PUBLIC_EXIT=0
+          AUTH_EXIT=0
 
-      - name: E2E (authenticated flows)
-        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_KEY != '' && env.SUPABASE_ANON_KEY != '' && env.E2E_EMAIL != '' && env.E2E_PASSWORD != '' }}
-        run: npx nx run todo-e2e:e2e -- --project=setup --project=chromium
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
+            npx nx run todo-e2e:e2e -- --project=chromium-public | tee reports/e2e/public.log || PUBLIC_EXIT=$?
+          else
+            echo "Skipped public E2E: Supabase env vars are missing." | tee reports/e2e/public.log
+          fi
+
+          if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ] && [ -n "$SUPABASE_ANON_KEY" ] && [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ]; then
+            npx nx run todo-e2e:e2e -- --project=setup --project=chromium | tee reports/e2e/auth.log || AUTH_EXIT=$?
+          else
+            echo "Skipped authenticated E2E: E2E credentials are missing." | tee reports/e2e/auth.log
+          fi
+
+          if [ $PUBLIC_EXIT -ne 0 ] || [ $AUTH_EXIT -ne 0 ]; then
+            echo "One or more E2E suites failed."
+            exit 1
+          fi
+
+      - name: Upload E2E artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-observability-artifacts
+          path: |
+            reports/e2e
+            dist/.playwright/todo-e2e
+            playwright-report
+            test-results
+          if-no-files-found: warn
+
+      - name: Job summary
+        if: always()
+        run: |
+          {
+            echo "## Post-deploy E2E stage"
+            echo "- Frontend URL: $BASE_URL"
+            echo "- Backend function URL: $API_FUNCTION_URL"
+            echo "- Artifacts: e2e-observability-artifacts"
+            echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"

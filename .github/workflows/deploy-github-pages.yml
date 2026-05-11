@@ -1,11 +1,11 @@
 name: Deploy GitHub Pages
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'todo/**'
-      - '.github/workflows/deploy-github-pages.yml'
+  workflow_call:
+    outputs:
+      deployment_url:
+        description: Frontend deployment URL
+        value: ${{ jobs.deploy.outputs.deployment_url }}
   workflow_dispatch:
 
 permissions:
@@ -18,6 +18,8 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    outputs:
+      deployment_url: ${{ steps.deployment_url.outputs.value }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,12 +29,13 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       - name: Substitute Supabase project ref for production API URL
         env:
           SUPABASE_PROJECT_REF: ${{ vars.SUPABASE_PROJECT_REF }}
         run: |
+          mkdir -p reports/deploy/frontend
           if [ -z "$SUPABASE_PROJECT_REF" ]; then
             echo "Configure repository variable SUPABASE_PROJECT_REF (your Supabase project reference ID)."
             exit 1
@@ -41,7 +44,10 @@ jobs:
 
       # Base href matches project Pages URL: https://<owner>.github.io/<repo>/
       - name: Build Angular (production)
-        run: npx nx run todo:build --configuration=production -- --base-href=/Todoapp/
+        run: |
+          mkdir -p reports/deploy/frontend
+          set -o pipefail
+          npx nx run todo:build --configuration=production -- --base-href=/Todoapp/ | tee reports/deploy/frontend/build.log
 
       - name: SPA fallback for GitHub Pages
         run: cp dist/todo/index.html dist/todo/404.html
@@ -52,3 +58,27 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./dist/todo
           force_orphan: true
+
+      - name: Resolve deployment URL
+        id: deployment_url
+        run: echo "value=https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/" >> "$GITHUB_OUTPUT"
+
+      - name: Upload frontend deploy artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deploy-frontend-artifacts
+          path: |
+            reports/deploy/frontend
+            dist/todo
+          if-no-files-found: warn
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          {
+            echo "## Frontend deploy"
+            echo "- URL: ${{ steps.deployment_url.outputs.value }}"
+            echo "- Artifacts: deploy-frontend-artifacts"
+            echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          } >> "$GITHUB_STEP_SUMMARY"

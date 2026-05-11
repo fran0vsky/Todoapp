@@ -11,30 +11,49 @@ const authFile = join(workspaceRoot, 'todo-e2e/.auth/user.json');
 
 // For CI, you may want to set BASE_URL to the deployed application.
 const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
+const isPostDeployRun = Boolean(process.env['BASE_URL']);
 
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
 export default defineConfig({
   ...nxE2EPreset(__filename, { testDir: './src' }),
+  outputDir: join(workspaceRoot, 'dist/.playwright/todo-e2e/test-output'),
+  reporter: [
+    ['list'],
+    [
+      'html',
+      {
+        open: 'never',
+        outputFolder: join(
+          workspaceRoot,
+          'dist/.playwright/todo-e2e/playwright-report',
+        ),
+      },
+    ],
+  ],
   use: {
     baseURL,
     trace: 'on-first-retry',
+    video: 'retain-on-failure',
+    screenshot: 'only-on-failure',
   },
-  webServer: [
-    {
-      command: 'npx nx run api:serve',
-      url: 'http://localhost:3333/api/health',
-      reuseExistingServer: !process.env['CI'],
-      cwd: workspaceRoot,
-    },
-    {
-      command: 'npx nx run todo:serve',
-      url: 'http://localhost:4200',
-      reuseExistingServer: !process.env['CI'],
-      cwd: workspaceRoot,
-    },
-  ],
+  webServer: isPostDeployRun
+    ? undefined
+    : [
+        {
+          command: 'npx nx run api:serve',
+          url: 'http://localhost:3333/api/health',
+          reuseExistingServer: !process.env['CI'],
+          cwd: workspaceRoot,
+        },
+        {
+          command: 'npx nx run todo:serve',
+          url: 'http://localhost:4200',
+          reuseExistingServer: !process.env['CI'],
+          cwd: workspaceRoot,
+        },
+      ],
   projects: [
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {

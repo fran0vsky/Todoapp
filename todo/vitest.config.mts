@@ -19,6 +19,7 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../coverage/todo',
       provider: 'v8' as const,
+      reporter: ['text', 'html', 'lcov'],
       include: ['src/**/*.ts'],
       exclude: [
         'src/**/*.spec.ts',

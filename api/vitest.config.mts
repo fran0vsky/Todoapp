@@ -16,6 +16,7 @@ export default defineConfig(() => ({
     coverage: {
       reportsDirectory: '../coverage/api',
       provider: 'v8' as const,
+      reporter: ['text', 'html', 'lcov'],
       include: ['src/services/validation.ts'],
       all: false,
       thresholds: {
