@@ -224,12 +224,16 @@ jobs:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-github-pages.yml
     permissions:
+      actions: read
       contents: write
     secrets: inherit
 
   deploy_backend:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-supabase-function.yml
+    permissions:
+      actions: read
+      contents: read
     secrets: inherit
 
   e2e_post_deploy:
