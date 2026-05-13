@@ -12,6 +12,7 @@ jobs:
   lint:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       security-events: write
     steps:
@@ -97,18 +98,51 @@ jobs:
           path: reports/lint
           if-no-files-found: warn
 
+      - name: Resolve lint artifact link
+        id: lint_artifact_link
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactName = 'lint-reports';
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              per_page: 100,
+            });
+            const artifact = data.artifacts.find((item) => item.name === artifactName && !item.expired);
+            if (!artifact) {
+              core.warning(`Artifact ${artifactName} not found`);
+              core.setOutput('url', '');
+              return;
+            }
+            const url = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${artifact.id}`;
+            core.setOutput('url', url);
+
       - name: Job summary
         if: always()
+        env:
+          LINT_ARTIFACT_URL: ${{ steps.lint_artifact_link.outputs.url }}
         run: |
           {
             echo "## Lint stage"
             echo "- Artifacts: lint-reports"
+            if [ -n "$LINT_ARTIFACT_URL" ]; then
+              echo "- Artifact link: $LINT_ARTIFACT_URL"
+            fi
+            echo "- Report entrypoints:"
+            echo "  - reports/lint/api.html"
+            echo "  - reports/lint/todo.html"
+            echo "  - reports/lint/e2e.html"
+            echo "  - reports/lint/sarif/*.sarif"
             echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
   test:
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
     steps:
       - uses: actions/checkout@v5
@@ -144,13 +178,45 @@ jobs:
             coverage/todo
           if-no-files-found: warn
 
+      - name: Resolve test artifact link
+        id: test_artifact_link
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactName = 'test-coverage-reports';
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              per_page: 100,
+            });
+            const artifact = data.artifacts.find((item) => item.name === artifactName && !item.expired);
+            if (!artifact) {
+              core.warning(`Artifact ${artifactName} not found`);
+              core.setOutput('url', '');
+              return;
+            }
+            const url = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${artifact.id}`;
+            core.setOutput('url', url);
+
       - name: Job summary
         if: always()
+        env:
+          TEST_ARTIFACT_URL: ${{ steps.test_artifact_link.outputs.url }}
         run: |
           {
             echo "## Test stage"
             echo "- Artifacts: test-coverage-reports"
+            if [ -n "$TEST_ARTIFACT_URL" ]; then
+              echo "- Artifact link: $TEST_ARTIFACT_URL"
+            fi
             echo "- Coverage paths: coverage/api, coverage/todo"
+            echo "- Report entrypoints:"
+            echo "  - coverage/api/index.html"
+            echo "  - coverage/todo/index.html"
+            echo "  - reports/test/test.log"
+            echo "  - reports/test/api-build.log"
             echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } >> "$GITHUB_STEP_SUMMARY"
 
@@ -169,6 +235,9 @@ jobs:
   e2e_post_deploy:
     needs: [deploy_frontend, deploy_backend]
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      contents: read
     env:
       CI: 'true'
       BASE_URL: ${{ needs.deploy_frontend.outputs.deployment_url }}
@@ -217,6 +286,18 @@ jobs:
             exit 1
           fi
 
+      - name: Collect frontend runtime coverage (HTML)
+        if: always()
+        run: |
+          mkdir -p reports/e2e
+          set -o pipefail
+          node .github/scripts/collect-frontend-e2e-coverage.mjs \
+            > reports/e2e/frontend-coverage.log 2>&1 \
+            || {
+              echo "Frontend coverage collection failed; see reports/e2e/frontend-coverage.log";
+              exit 0;
+            }
+
       - name: Upload E2E artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -224,16 +305,51 @@ jobs:
           name: e2e-observability-artifacts
           path: |
             reports/e2e
+            reports/e2e/coverage-html
             dist/.playwright/todo-e2e
           if-no-files-found: warn
 
+      - name: Resolve E2E artifact link
+        id: e2e_artifact_link
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const artifactName = 'e2e-observability-artifacts';
+            const { data } = await github.rest.actions.listWorkflowRunArtifacts({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              run_id: context.runId,
+              per_page: 100,
+            });
+            const artifact = data.artifacts.find((item) => item.name === artifactName && !item.expired);
+            if (!artifact) {
+              core.warning(`Artifact ${artifactName} not found`);
+              core.setOutput('url', '');
+              return;
+            }
+            const url = `${process.env.GITHUB_SERVER_URL}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}/artifacts/${artifact.id}`;
+            core.setOutput('url', url);
+
       - name: Job summary
         if: always()
+        env:
+          E2E_ARTIFACT_URL: ${{ steps.e2e_artifact_link.outputs.url }}
         run: |
           {
             echo "## Post-deploy E2E stage"
             echo "- Frontend URL: $BASE_URL"
             echo "- Backend function URL: $API_FUNCTION_URL"
             echo "- Artifacts: e2e-observability-artifacts"
+            if [ -n "$E2E_ARTIFACT_URL" ]; then
+              echo "- Artifact link: $E2E_ARTIFACT_URL"
+            fi
+            echo "- Report entrypoints:"
+            echo "  - dist/.playwright/todo-e2e/playwright-report/index.html"
+            echo "  - dist/.playwright/todo-e2e/test-output/** (videos/screenshots/traces)"
+            echo "  - reports/e2e/public.log"
+            echo "  - reports/e2e/auth.log"
+            echo "  - reports/e2e/coverage-html/index.html"
+            echo "  - reports/e2e/frontend-coverage.log"
             echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
           } >> "$GITHUB_STEP_SUMMARY"
