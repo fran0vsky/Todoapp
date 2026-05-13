@@ -263,8 +263,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Install Playwright Chromium (with OS deps)
-        run: npx playwright install --with-deps chromium
+      - name: Cache Playwright browser binaries
+        id: playwright_cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        if: steps.playwright_cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
 
       - name: Run post-deploy E2E suites
         run: |
