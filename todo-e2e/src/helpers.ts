@@ -64,3 +64,15 @@ export async function expectRegisterHeading(page: Page): Promise<void> {
     page.getByRole('heading', { level: 2, name: 'Register' }),
   ).toBeVisible();
 }
+
+/**
+ * Returns locators that contain dynamic content (timestamps, IDs, generated
+ * names) which should be masked when taking visual-regression screenshots.
+ */
+export function dynamicContentMask(page: Page) {
+  return [
+    page.locator('time'),
+    page.locator('[data-testid="project-id"]'),
+    page.locator('[data-testid="task-id"]'),
+  ];
+}

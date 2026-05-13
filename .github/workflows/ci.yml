@@ -281,19 +281,22 @@ jobs:
           PUBLIC_EXIT=0
           AUTH_EXIT=0
 
+          VISUAL_EXIT=0
+
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ] && [ -n "$SUPABASE_ANON_KEY" ]; then
-            npx nx run todo-e2e:e2e -- --project=chromium-public | tee reports/e2e/public.log || PUBLIC_EXIT=$?
+            npx nx run todo-e2e:e2e -- --project=chromium-public --project=chromium-visual-public | tee reports/e2e/public.log || PUBLIC_EXIT=$?
           else
             echo "Skipped public E2E: Supabase env vars are missing." | tee reports/e2e/public.log
           fi
 
           if [ -n "$SUPABASE_URL" ] && [ -n "$SUPABASE_KEY" ] && [ -n "$SUPABASE_ANON_KEY" ] && [ -n "$E2E_EMAIL" ] && [ -n "$E2E_PASSWORD" ]; then
-            npx nx run todo-e2e:e2e -- --project=setup --project=chromium | tee reports/e2e/auth.log || AUTH_EXIT=$?
+            npx nx run todo-e2e:e2e -- --project=setup --project=chromium --project=chromium-visual | tee reports/e2e/auth.log || AUTH_EXIT=$?
           else
             echo "Skipped authenticated E2E: E2E credentials are missing." | tee reports/e2e/auth.log
+            echo "Skipped visual regression (auth): E2E credentials are missing." | tee reports/e2e/visual.log
           fi
 
-          if [ $PUBLIC_EXIT -ne 0 ] || [ $AUTH_EXIT -ne 0 ]; then
+          if [ $PUBLIC_EXIT -ne 0 ] || [ $AUTH_EXIT -ne 0 ] || [ $VISUAL_EXIT -ne 0 ]; then
             echo "One or more E2E suites failed."
             exit 1
           fi
@@ -361,6 +364,7 @@ jobs:
             echo "  - dist/.playwright/todo-e2e/test-output/** (videos/screenshots/traces)"
             echo "  - reports/e2e/public.log"
             echo "  - reports/e2e/auth.log"
+            echo "  - reports/e2e/visual.log"
             echo "  - reports/e2e/coverage-html/index.html"
             echo "  - reports/e2e/frontend-coverage.log"
             echo "- Run artifacts: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

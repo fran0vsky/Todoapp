@@ -70,5 +70,19 @@ export default defineConfig({
       dependencies: ['setup'],
       testMatch: /app\.spec\.ts/,
     },
+    {
+      name: 'chromium-visual-public',
+      testMatch: /visual-public\.spec\.ts/,
+      use: { ...devices['Desktop Chrome'] },
+    },
+    {
+      name: 'chromium-visual',
+      use: {
+        ...devices['Desktop Chrome'],
+        storageState: authFile,
+      },
+      dependencies: ['setup'],
+      testMatch: /visual\.spec\.ts/,
+    },
   ],
 });
