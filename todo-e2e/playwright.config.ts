@@ -20,6 +20,10 @@ const isPostDeployRun = Boolean(process.env['BASE_URL']);
 export default defineConfig({
   ...nxE2EPreset(__filename, { testDir: './src' }),
   outputDir: join(workspaceRoot, 'dist/.playwright/todo-e2e/test-output'),
+  // Post-deploy runs hit a real Edge Function that can cold-start in 5–15 s,
+  // so both the per-test timeout and the default assertion timeout are raised.
+  timeout: isPostDeployRun ? 90_000 : 30_000,
+  expect: { timeout: isPostDeployRun ? 60_000 : 10_000 },
   reporter: [
     ['list'],
     [
@@ -59,7 +63,7 @@ export default defineConfig({
     { name: 'setup', testMatch: /auth\.setup\.ts/ },
     {
       name: 'chromium-public',
-      testMatch: /public\.spec\.ts/,
+      testMatch: /\/public\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'] },
     },
     {

@@ -1,0 +1,93 @@
+name: Update Playwright Snapshots
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: 'Deployed frontend URL (e.g. https://fran0vsky.github.io/Todoapp/)'
+        required: true
+        type: string
+      branch:
+        description: 'Branch to commit updated snapshots to'
+        required: true
+        default: main
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  update_snapshots:
+    runs-on: ubuntu-latest
+    env:
+      CI: 'true'
+      BASE_URL: ${{ inputs.base_url }}
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+      E2E_EMAIL: ${{ secrets.E2E_EMAIL }}
+      E2E_PASSWORD: ${{ secrets.E2E_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.branch }}
+          # Use a token with write access so the commit push is allowed.
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Cache Playwright browser binaries
+        id: playwright_cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Playwright Chromium
+        if: steps.playwright_cache.outputs.cache-hit != 'true'
+        run: npx playwright install chromium
+
+      - name: Generate public visual baselines
+        run: |
+          npx nx run todo-e2e:e2e -- \
+            --project=chromium-visual-public \
+            --update-snapshots \
+            || true
+
+      - name: Generate authenticated visual baselines
+        if: ${{ env.E2E_EMAIL != '' && env.E2E_PASSWORD != '' }}
+        run: |
+          npx nx run todo-e2e:e2e -- \
+            --project=setup \
+            --project=chromium-visual \
+            --update-snapshots \
+            || true
+
+      - name: Commit updated snapshots
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add todo-e2e/src/visual-public.spec.ts-snapshots/
+          git add todo-e2e/src/visual.spec.ts-snapshots/ || true
+          if git diff --cached --quiet; then
+            echo "No snapshot changes to commit."
+          else
+            git commit -m "chore(e2e): update Playwright visual snapshot baselines [skip ci]"
+            git push origin ${{ inputs.branch }}
+          fi
+
+      - name: Upload snapshot artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: updated-snapshots
+          path: |
+            todo-e2e/src/visual-public.spec.ts-snapshots/
+            todo-e2e/src/visual.spec.ts-snapshots/
+          if-no-files-found: warn
