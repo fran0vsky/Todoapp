@@ -24,6 +24,8 @@ const MAX_NICKNAME_LENGTH = 40;
 @Injectable({ providedIn: 'root' })
 export class AuthService implements OnDestroy {
   readonly currentUser = signal<User | null>(null);
+  /** True once the initial getSession() call has resolved. Guards wait on this before checking currentUser. */
+  readonly authChecked = signal(false);
 
   /** Matches server ADMIN_EMAIL; used to enable admin-only UI (e.g. delete project). */
   readonly isAdmin = computed(() => {
@@ -57,10 +59,12 @@ export class AuthService implements OnDestroy {
       });
     });
 
-    // Check current session on service init (e.g., page refresh)
+    // Check current session on service init (e.g., page refresh).
+    // authChecked is set to true once this resolves so authGuard can wait for it.
     from(getSupabase().auth.getSession()).subscribe(({ data: { session } }) => {
       this.ngZone.run(() => {
         this.currentUser.set(session?.user ?? null);
+        this.authChecked.set(true);
         if (session) {
           console.log(
             '[AuthService] Initial session check: session found.',
