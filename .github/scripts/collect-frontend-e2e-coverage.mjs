@@ -90,6 +90,12 @@ async function fileExists(path) {
   }
 }
 
+function resolveAppUrl(base, relative) {
+  const normalizedBase = base.endsWith('/') ? base : `${base}/`;
+  const normalizedPath = relative.replace(/^\//, '');
+  return `${normalizedBase}${normalizedPath}`;
+}
+
 async function collectScenarioCoverage({ id, relativePath, storageState }) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext(
@@ -104,7 +110,7 @@ async function collectScenarioCoverage({ id, relativePath, storageState }) {
     detailed: true,
   });
 
-  const targetUrl = new URL(relativePath, baseUrl).toString();
+  const targetUrl = resolveAppUrl(baseUrl, relativePath);
   await page.goto(targetUrl, { waitUntil: 'networkidle', timeout: 60000 });
   await page.waitForTimeout(2000);
 
