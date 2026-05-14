@@ -10,7 +10,8 @@ loadEnv({ path: join(workspaceRoot, '.env') });
 const authFile = join(workspaceRoot, 'todo-e2e/.auth/user.json');
 
 // For CI, you may want to set BASE_URL to the deployed application.
-const baseURL = process.env['BASE_URL'] || 'http://localhost:4200';
+const rawBaseURL = process.env['BASE_URL'] || 'http://localhost:4200';
+const baseURL = rawBaseURL.endsWith('/') ? rawBaseURL : `${rawBaseURL}/`;
 const isPostDeployRun = Boolean(process.env['BASE_URL']);
 
 /**

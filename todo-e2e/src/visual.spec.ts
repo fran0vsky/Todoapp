@@ -13,7 +13,7 @@ const SCREENSHOT_OPTIONS = {
 
 test.describe('visual regression - authenticated', () => {
   test('projects list page', async ({ page }) => {
-    await page.goto('/');
+    await page.goto('./');
     await waitForProjectsPage(page);
     await expect(page).toHaveScreenshot('projects-list.png', {
       ...SCREENSHOT_OPTIONS,

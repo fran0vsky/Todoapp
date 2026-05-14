@@ -12,7 +12,7 @@ const SCREENSHOT_OPTIONS = {
 
 test.describe('visual regression - public', () => {
   test('login page', async ({ page }) => {
-    await page.goto('/login');
+    await page.goto('login');
     await expectLoginHeading(page);
     await expect(page).toHaveScreenshot('login-page.png', {
       ...SCREENSHOT_OPTIONS,
@@ -21,7 +21,7 @@ test.describe('visual regression - public', () => {
   });
 
   test('register page', async ({ page }) => {
-    await page.goto('/register');
+    await page.goto('register');
     await expectRegisterHeading(page);
     await expect(page).toHaveScreenshot('register-page.png', {
       ...SCREENSHOT_OPTIONS,

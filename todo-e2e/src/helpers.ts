@@ -23,7 +23,7 @@ export async function createProjectAndOpenBoard(
   page: Page,
   name: string,
 ): Promise<void> {
-  await page.goto('/');
+  await page.goto('./');
   await waitForProjectsPage(page);
   await page.getByPlaceholder(/project name/i).fill(name);
   await page.getByRole('button', { name: /create project/i }).click();
