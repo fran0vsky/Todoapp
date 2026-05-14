@@ -1,6 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
   createProjectAndOpenBoard,
+  fillDescriptionField,
   openAddTaskModal,
   saveTaskForm,
   taskCardInColumn,
@@ -8,6 +9,9 @@ import {
   waitForBoardLoaded,
   waitForProjectsPage,
 } from './helpers';
+
+// Real microphone recording is unavailable in headless CI environments.
+const skipVoiceRecording = !!process.env['CI'];
 
 test.describe('projects', () => {
   test('lists projects and opens a board from View', async ({ page }) => {
@@ -36,6 +40,7 @@ test.describe('tasks', () => {
     const title = `Task ${Date.now()}`;
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(title);
+    await fillDescriptionField(page, 'Test description.');
     await saveTaskForm(page);
     await expect(page.getByPlaceholder('Title...')).toBeHidden({
       timeout: 10_000,
@@ -52,6 +57,7 @@ test.describe('tasks', () => {
     const original = `Orig ${Date.now()}`;
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(original);
+    await fillDescriptionField(page, 'Test description.');
     await saveTaskForm(page);
     await expect(page.getByPlaceholder('Title...')).toBeHidden({
       timeout: 10_000,
@@ -80,6 +86,7 @@ test.describe('tasks', () => {
     const title = `Archive ${Date.now()}`;
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(title);
+    await fillDescriptionField(page, 'Test description.');
     await saveTaskForm(page);
     await expect(page.getByPlaceholder('Title...')).toBeHidden({
       timeout: 10_000,
@@ -142,6 +149,7 @@ test.describe('tasks', () => {
     const title = `Delete ${Date.now()}`;
     await openAddTaskModal(page);
     await page.getByPlaceholder('Title...').fill(title);
+    await fillDescriptionField(page, 'Test description.');
     await saveTaskForm(page);
     await expect(page.getByPlaceholder('Title...')).toBeHidden({
       timeout: 10_000,
@@ -170,6 +178,7 @@ test.describe('voice task', () => {
     page,
     context,
   }) => {
+    test.skip(skipVoiceRecording, 'Real microphone unavailable in headless CI');
     // Grant microphone permission so the browser does not show a native prompt.
     await context.grantPermissions(['microphone']);
 
@@ -188,6 +197,7 @@ test.describe('voice task', () => {
     page,
     context,
   }) => {
+    test.skip(skipVoiceRecording, 'Real microphone unavailable in headless CI');
     await context.grantPermissions(['microphone']);
 
     const projectName = `Voice ${Date.now()}`;

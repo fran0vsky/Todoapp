@@ -37,6 +37,17 @@ export async function openAddTaskModal(page: Page): Promise<void> {
   await expect(page.getByPlaceholder('Title...')).toBeVisible();
 }
 
+/**
+ * Fills the rich-text description field (a contenteditable div) in the task
+ * form modal. Description is required by the app before Save is enabled.
+ */
+export async function fillDescriptionField(
+  page: Page,
+  text: string,
+): Promise<void> {
+  await page.locator('[contenteditable="true"]').fill(text);
+}
+
 export async function saveTaskForm(page: Page): Promise<void> {
   await page.getByRole('button', { name: 'Save' }).click();
 }
