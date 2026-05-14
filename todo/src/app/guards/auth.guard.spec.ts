@@ -62,7 +62,11 @@ describe('authGuard', () => {
     });
 
     const resultPromise = TestBed.runInInjectionContext(() =>
-      firstValueFrom(authGuard({} as never, {} as never) as ReturnType<typeof firstValueFrom>),
+      firstValueFrom(
+        authGuard({} as never, {} as never) as ReturnType<
+          typeof firstValueFrom
+        >,
+      ),
     );
 
     // Simulate getSession() resolving after a tick
@@ -86,7 +90,11 @@ describe('authGuard', () => {
     });
 
     const resultPromise = TestBed.runInInjectionContext(() =>
-      firstValueFrom(authGuard({} as never, {} as never) as ReturnType<typeof firstValueFrom>),
+      firstValueFrom(
+        authGuard({} as never, {} as never) as ReturnType<
+          typeof firstValueFrom
+        >,
+      ),
     );
 
     authChecked.set(true);
